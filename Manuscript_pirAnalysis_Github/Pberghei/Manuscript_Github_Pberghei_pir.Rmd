@@ -817,6 +817,7 @@ names(clade_col_num) <- sapply(names(clade_col),
   group_by(clade) %>% 
   mutate(clade = paste0(clade, ' (n = ', n_distinct(Geneid) ,')')) %>% 
     mutate(stack_group = Geneid) %>% 
+    mutate(tpm = ifelse(tpm > 1, tpm, 0)) %>% #Filtering step for low value pir genes.
     group_by(stage, 
              stack_group,
              clade) %>% 
@@ -1724,7 +1725,6 @@ facet_wrap_custom <- function(..., scale_overrides = NULL) {
     annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)
 )
 #Could also use functions from a package called 'lemon' to add the lines to the top two facets.
-```
 ```
 
 
