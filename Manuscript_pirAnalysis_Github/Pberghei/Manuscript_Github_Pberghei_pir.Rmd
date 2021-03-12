@@ -280,11 +280,10 @@ pir_loci <- data.frame(
 #   first part of the ifelse statement so that chrom2 doesn't have an erroneous jump as it starts at >1000
 # Later cumsum is do that every gene after the 'jump' is included allowing us to define telomere ends.
 
-pir_clade <- mutate(pir_clade, 
-                    locus = pir_loci$locus[match(Geneid, pir_loci$Geneid)])
-
 pir_clade <- read_delim('../standard_files/Pberghei_pir_clades.txt', 
                         delim = '\t')
+pir_clade <- mutate(pir_clade, 
+                    locus = pir_loci$locus[match(Geneid, pir_loci$Geneid)])
 pir_id <- pir_clade$Geneid
 
 pir_clade_list <- lapply(unique(pir_clade$clade), function(clade_name){
@@ -470,148 +469,6 @@ expt_tpms$E03$tpm$`Asex-Schiz_1` <- NULL
 expt_tpms$E03$tpm$`Asex-Schiz_3` <- NULL
 ```
 
-## Supp figure - PCA of all the samples.
-
-```{r supp_figure_PCA_allgenes}
-
-big_tpm <- bind_cols(
-  lapply(
-    expt_tpms,
-    function(x){
-      tpm_df <- x$tpm
-      colnames(tpm_df)[-1] <- paste0(x$experiment,
-                                     '_',
-                                     colnames(tpm_df)[-1])
-      tpm_df
-    }
-  )
-) %>% 
-  dplyr::rename(Geneid = Geneid...1) %>% 
-  select_at(vars(-matches('Geneid\\.\\.\\.\\d+$'))) %>% 
-  data.frame
-
-rownames(big_tpm) <- big_tpm$Geneid
-
-big_tpm <- big_tpm[,-1,drop=FALSE] 
-
-big_tpm_pca <-  prcomp(big_tpm, 
-                       center = TRUE, 
-                       scale. = TRUE)
-
-big_tpm_pca_var <- get_pca_var(big_tpm_pca)
-big_tpm_pca_coords <- data.frame(sample = rownames(big_tpm_pca_var$coord),
-                                 big_tpm_pca_var$coord)
-big_tpm_pca_coords$stage_experiment <- str_extract(
-  big_tpm_pca_coords$sample,
-  pattern = '.+(?=_[[:digit:]]+$)'
-)
-big_tpm_pca_coords$stage <- str_extract(big_tpm_pca_coords$sample, 
-                                        pattern = '(?<=E[[:digit:]]{2}_).+(?=_[[:digit:]]+$)')
-big_tpm_pca_coords$experiment <- str_extract(big_tpm_pca_coords$sample, 
-                                             pattern = '^.+(?=_.+_[[:digit:]]+$)')
-
-colornames <- setNames(rep_len(c(cbPalette, 'black', 'red'), 
-                               length.out = length(unique(big_tpm_pca_coords$stage))),
-                       unique(big_tpm_pca_coords$stage))
-
-pca_importance <- as.data.frame(summary(big_tpm_pca)$importance)
-
-plot <- ggplot(big_tpm_pca_coords,
-       aes(
-         x = Dim.1,
-         y = Dim.2,
-         col = stage,
-         shape = experiment
-       )) +
-  geom_point() +
-  scale_fill_manual(values = colornames) +
-  scale_shape_manual(
-    values = setNames(
-      c(1:10),
-      unique(big_tpm_pca_coords$experiment)
-    )
-  ) +
-  xlab(paste0('PC1 ', round(pca_importance$PC1[2]*100, digits = 1),'%')) +
-  ylab(paste0('PC2 ', round(pca_importance$PC2[2]*100, digits = 1),'%')) +
-  guides(shape=guide_legend(ncol=2),
-         col = guide_legend(ncol=2)) +
-  theme_classic() +
-  theme(legend.key.size = unit(5, 'mm'),
-        legend.text = element_text(size = 6))
-
-
-plot
-
-```
-
-```{r supp_figure_PCA_pir}
-big_tpm_pir <- big_tpm[rownames(big_tpm) %in% pir_id,,drop = FALSE]
-
-big_tpm_pir_pca <-  prcomp(big_tpm_pir, 
-                       center = TRUE, 
-                       scale. = TRUE)
-
-big_tpm_pir_pca_var <- get_pca_var(big_tpm_pir_pca)
-big_tpm_pir_pca_coords <- data.frame(sample = rownames(big_tpm_pir_pca_var$coord),
-                                 big_tpm_pir_pca_var$coord)
-big_tpm_pir_pca_coords$stage_experiment <- str_extract(
-  big_tpm_pir_pca_coords$sample,
-  pattern = '.+(?=_[[:digit:]]+$)'
-)
-big_tpm_pir_pca_coords$stage <- str_extract(big_tpm_pir_pca_coords$sample, 
-                                        pattern = '(?<=E[[:digit:]]{2}_).+(?=_[[:digit:]]+$)')
-big_tpm_pir_pca_coords$experiment <- str_extract(big_tpm_pir_pca_coords$sample, 
-                                             pattern = '^.+(?=_.+_[[:digit:]]+$)')
-
-colornames <- setNames(rep_len(c(cbPalette, 'black', 'red'), 
-                               length.out = length(unique(big_tpm_pir_pca_coords$stage))),
-                       unique(big_tpm_pir_pca_coords$stage))
-
-pca_importance <- as.data.frame(summary(big_tpm_pir_pca)$importance)
-
-plot_pir <- ggplot(big_tpm_pir_pca_coords,
-       aes(
-         x = Dim.1,
-         y = Dim.2,
-         col = stage,
-         shape = experiment
-       )) +
-  geom_point() +
-  scale_fill_manual(values = colornames) +
-  scale_shape_manual(
-    values = setNames(
-      c(1:10),
-      unique(big_tpm_pca_coords$experiment)
-    )
-  ) +
-  xlab(paste0('PC1 ', round(pca_importance$PC1[2]*100, digits = 1),'%')) +
-  ylab(paste0('PC2 ', round(pca_importance$PC2[2]*100, digits = 1),'%')) +
-  guides(shape=guide_legend(ncol=2),
-         col = guide_legend(ncol=2)) +
-  theme_classic() +
-  theme(legend.key.size = unit(5, 'mm'),
-        legend.text = element_text(size = 6)) 
-
-plot_pir
-```
-
-How many experiments cover each life stage?
-
-```{r experiment_per_life_stage}
-
-big_tpm %>% 
-  rownames_to_column(var = 'Geneid') %>% 
-  melt(id.vars = 'Geneid') %>% 
-  mutate(
-    stage = str_extract(variable, pattern = '(?<=E[:digit:]{2}_).+(?=_[:digit:])'),
-    expt = str_extract(variable, pattern = 'E[:digit:]{2}')
-  ) %>% 
-  group_by(stage) %>% 
-    summarise(num_expt = n_distinct(expt)) %>% 
-    arrange(desc(num_expt))
-
-```
-
 ## The highest expressed _pir_ genes across the samples
 
 ```{r top_genes, echo = FALSE, message = FALSE, results = "asis"}
@@ -684,20 +541,34 @@ top_n_genes <- function(tpm_input,
 all_top <- lapply(expt_tpms, 
                   top_n_genes)
 
-###
-
-### Read in top genes
-
-
-###
-
 lapply(all_top, `[`, c('all_genes', 'pir_genes'))
 
 ```
 
-## Pearson correlation plot of collated samples.
+##Supp figure 1A - Pearson correlation plot of collated samples.
 
 ```{r all_samples_collated_heatmap}
+
+big_tpm <- bind_cols(
+  lapply(
+    expt_tpms,
+    function(x){
+      tpm_df <- x$tpm
+      colnames(tpm_df)[-1] <- paste0(x$experiment,
+                                     '_',
+                                     colnames(tpm_df)[-1])
+      tpm_df
+    }
+  )
+) %>% 
+  dplyr::rename(Geneid = Geneid...1) %>% 
+  select_at(vars(-matches('Geneid\\.\\.\\.\\d+$'))) %>% 
+  data.frame
+
+rownames(big_tpm) <- big_tpm$Geneid
+
+big_tpm <- big_tpm[,-1,drop=FALSE] 
+
 ## Collated across the stages for a more easily understood heatmap
 
 big_top = bind_rows(lapply(all_top,function(x){
@@ -716,6 +587,113 @@ corrplot(cor(big_top_recast), method = 'color',
          order = 'hclust', hclust.method = 'ward.D2',
          cl.lim = c(-0.036,1), tl.cex = 0.50,
          col = c(viridis(100), magma(115)), addrect = 6)
+```
+
+## Supp figure 1B - PCA of all the samples.
+
+```{r supp_figure_PCA_allgenes}
+
+big_tpm_pca <-  prcomp(big_tpm, 
+                       center = TRUE, 
+                       scale. = TRUE)
+
+big_tpm_pca_var <- get_pca_var(big_tpm_pca)
+big_tpm_pca_coords <- data.frame(sample = rownames(big_tpm_pca_var$coord),
+                                 big_tpm_pca_var$coord)
+big_tpm_pca_coords$stage_experiment <- str_extract(
+  big_tpm_pca_coords$sample,
+  pattern = '.+(?=_[[:digit:]]+$)'
+)
+big_tpm_pca_coords$stage <- str_extract(big_tpm_pca_coords$sample, 
+                                        pattern = '(?<=E[[:digit:]]{2}_).+(?=_[[:digit:]]+$)')
+big_tpm_pca_coords$experiment <- str_extract(big_tpm_pca_coords$sample, 
+                                             pattern = '^.+(?=_.+_[[:digit:]]+$)')
+
+colornames <- setNames(rep_len(c(cbPalette, 'black', 'red'), 
+                               length.out = length(unique(big_tpm_pca_coords$stage))),
+                       unique(big_tpm_pca_coords$stage))
+
+pca_importance <- as.data.frame(summary(big_tpm_pca)$importance)
+
+plot <- ggplot(big_tpm_pca_coords,
+       aes(
+         x = Dim.1,
+         y = Dim.2,
+         col = stage,
+         shape = experiment
+       )) +
+  geom_point() +
+  scale_fill_manual(values = colornames) +
+  scale_shape_manual(
+    values = setNames(
+      c(1:10),
+      unique(big_tpm_pca_coords$experiment)
+    )
+  ) +
+  xlab(paste0('PC1 ', round(pca_importance$PC1[2]*100, digits = 1),'%')) +
+  ylab(paste0('PC2 ', round(pca_importance$PC2[2]*100, digits = 1),'%')) +
+  guides(shape=guide_legend(ncol=2),
+         col = guide_legend(ncol=2)) +
+  theme_classic() +
+  theme(legend.key.size = unit(5, 'mm'),
+        legend.text = element_text(size = 6))
+
+
+plot
+
+```
+
+#Supp figure 1C - PCA using just the pir genes.
+
+```{r supp_figure_PCA_pir}
+big_tpm_pir <- big_tpm[rownames(big_tpm) %in% pir_id,,drop = FALSE]
+
+big_tpm_pir_pca <-  prcomp(big_tpm_pir, 
+                       center = TRUE, 
+                       scale. = TRUE)
+
+big_tpm_pir_pca_var <- get_pca_var(big_tpm_pir_pca)
+big_tpm_pir_pca_coords <- data.frame(sample = rownames(big_tpm_pir_pca_var$coord),
+                                 big_tpm_pir_pca_var$coord)
+big_tpm_pir_pca_coords$stage_experiment <- str_extract(
+  big_tpm_pir_pca_coords$sample,
+  pattern = '.+(?=_[[:digit:]]+$)'
+)
+big_tpm_pir_pca_coords$stage <- str_extract(big_tpm_pir_pca_coords$sample, 
+                                        pattern = '(?<=E[[:digit:]]{2}_).+(?=_[[:digit:]]+$)')
+big_tpm_pir_pca_coords$experiment <- str_extract(big_tpm_pir_pca_coords$sample, 
+                                             pattern = '^.+(?=_.+_[[:digit:]]+$)')
+
+colornames <- setNames(rep_len(c(cbPalette, 'black', 'red'), 
+                               length.out = length(unique(big_tpm_pir_pca_coords$stage))),
+                       unique(big_tpm_pir_pca_coords$stage))
+
+pca_importance <- as.data.frame(summary(big_tpm_pir_pca)$importance)
+
+plot_pir <- ggplot(big_tpm_pir_pca_coords,
+       aes(
+         x = Dim.1,
+         y = Dim.2,
+         col = stage,
+         shape = experiment
+       )) +
+  geom_point() +
+  scale_fill_manual(values = colornames) +
+  scale_shape_manual(
+    values = setNames(
+      c(1:10),
+      unique(big_tpm_pca_coords$experiment)
+    )
+  ) +
+  xlab(paste0('PC1 ', round(pca_importance$PC1[2]*100, digits = 1),'%')) +
+  ylab(paste0('PC2 ', round(pca_importance$PC2[2]*100, digits = 1),'%')) +
+  guides(shape=guide_legend(ncol=2),
+         col = guide_legend(ncol=2)) +
+  theme_classic() +
+  theme(legend.key.size = unit(5, 'mm'),
+        legend.text = element_text(size = 6)) 
+
+plot_pir
 ```
 
 ```{r combining_stages_data}
@@ -806,7 +784,7 @@ names(clade_col_num) <- sapply(names(clade_col),
 
 # pir expression, S or L-form, stacked bar chart, stack for each gene
 
-```{r SorL_stacked_eachGene_fig1b}
+```{r SorL_stacked_eachGene_fig2a}
   tpm_data <- combined_data %>% 
     rownames_to_column(var = 'Geneid') %>% 
     filter(Geneid %in% pir_id) %>% 
@@ -1114,7 +1092,7 @@ tpm_data_SorL_stackgenes_top_table %>%
   scroll_box(width = "100%", height = "500px")
 ```
 
-## Figure 1C 
+## Figure 2B - sub-family proportions 
 
 ```{r combined_tpm_stacked_df}
 
@@ -1140,8 +1118,6 @@ tpm_data_SorL_stackgenes_top_table %>%
 )
   
 
-#Separate out the pan-rodent pir
-# tpm_data_subfam$clade[tpm_data_subfam$stack_group == 'PBANKA_0524600'] <- 'pan-rodent'
   
 tpm_data_subfam <- mutate(tpm_data_subfam,
                    order = row_number())
@@ -1246,280 +1222,7 @@ y <- ggplot(data = tpm_data_subfam,
   grid.draw(g)
 ```
 
-## Chromosome proportional bar chart supp fig
-
-```{r chrom_prop_bar_chart}
-tpm_data_chrom <- combined_data %>% 
-  rownames_to_column(var = 'Geneid') %>% 
-  filter(Geneid %in% pir_id) %>% 
-  melt(id.vars = 'Geneid', 
-       variable.name = 'stage', 
-       value.name = 'tpm') %>% 
-  mutate(
-    chrom = str_extract(Geneid, pattern = '(?<=PBANKA_)[[:digit:]]{2}')
-  ) %>% 
-  group_by(chrom) %>% 
-  mutate(chrom = paste0(chrom, ' (n = ', n_distinct(Geneid) ,')')) %>% 
-  group_by(stage, 
-           chrom) %>% 
-  dplyr::summarise(total_tpm = sum(tpm)) %>%
-  arrange(
-          desc(chrom),
-          total_tpm
-) %>% 
-  mutate(chrom = factor(chrom, 
-                        levels = unique(chrom)))
-  
-  stacked_max <- tpm_data_chrom %>% 
-    ungroup %>% 
-    group_by(stage) %>% 
-    dplyr::summarise(max_tpm = sum(total_tpm)) %>% 
-    .$max_tpm %>% 
-    max
-  
-  max_tpm <- c(
-    seq(
-      0,
-      mround(
-        stacked_max,
-        500),
-      length.out = 11)
-  )
-
-y <- ggplot(data = tpm_data_chrom) +
-  geom_bar_pattern(
-    aes(
-      x = stage,
-      y = total_tpm, 
-      fill = chrom,
-      group = stage,
-      pattern = chrom
-    ),
-    position = 'fill',
-    stat = 'identity',
-    colour = 'black',
-    size = 0.1,
-    pattern_density = 0.2,
-    pattern_spacing = 0.05,
-    pattern_key_scale_factor = 0.25
-  ) +
-  scale_pattern_manual(
-    values = rep(c('none', 
-                   'circle'), 
-                 each = length(c(cbPalette, 
-                                 'red', 
-                                 'white')), 
-                 length.out = length(unique(tpm_data_chrom$chrom))),
-    labels = unique(tpm_data_chrom$chrom),
-    guide = guide_legend(reverse = TRUE),
-    name = 'chromosome'
-  ) +
-  scale_fill_manual(
-    breaks = unique(tpm_data_chrom$chrom),
-    values = rep_len(c(cbPalette, 
-                       'red', 
-                       'white'),
-                     length.out = length(unique(tpm_data_chrom$chrom))),
-    labels =  unique(tpm_data_chrom$chrom),
-    guide = guide_legend(reverse = TRUE),
-    name = 'chromosome'
-  ) +
-  scale_color_manual('black') +
-  scale_size(range = c(0,3)) +
-  ylab(
-    bquote('total '~italic(.('pir'))~' TPM')
-  ) +
-  facet_grid(.~stage,
-             scales = "free_x",
-             space = "free_x") +
-  scale_x_discrete(expand=expand_scale(add=1)) +
-  theme_classic() +
-  theme(
-    axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x = element_blank(),
-    # axis.line.x = element_blank(),
-    axis.text.y = element_text(size = 10),
-    axis.title.y = element_text(size = 10),
-    legend.title = element_blank(),
-    legend.text = element_text(size = 8),
-    legend.key.size = unit(3,'mm'),
-    legend.key.width = unit(2,'mm'),
-    strip.text.x = element_text(size=8,
-                                face = 'bold',
-                                angle = 90),
-    strip.background = element_rect(
-      color="black",
-      size=0.1,
-      linetype="solid"
-    ),
-    panel.spacing.x = unit(0, "null")
-  )
-
-  #This bit is to change the colour of the facet boxes
-
-  g <- ggplot_gtable(ggplot_build(y))
-  strip_t <- which(grepl('strip-t', g$layout$name))
-  stage_vec <- unique(
-
-    levels(tpm_data$stage)
-  )
-  fills <- case_when(str_detect(stage_vec, pattern = 'Asex') ~ 'coral1' ,
-                     str_detect(stage_vec, pattern = 'Liv') ~ 'plum2',
-                     str_detect(stage_vec, pattern = 'Gam') ~ 'lightskyblue1',
-                     str_detect(stage_vec, pattern  = 'Bld|Sporo|Ook') ~ 'lightgreen')
-  k <- 1
-  for (i in strip_t) {
-    j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
-    g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
-    k <- k+1
-  }
-
-  grid.newpage()
-  grid.draw(g)
-
-```
-
-## Expression by locus. Proportion. Supp figure.
-
-Loci are defined by L or R of each chromosome number, will define this by the jump in the gene numbers. 
-
-```{r defining_loci}
-
-tpm_data_locus <- combined_data %>% 
-  rownames_to_column(var = 'Geneid') %>% 
-  filter(Geneid %in% pir_id) %>% 
-  melt(id.vars = 'Geneid', 
-       variable.name = 'stage', 
-       value.name = 'tpm') %>% 
-  mutate(
-    locus = pir_loci$locus[match(Geneid, pir_loci$Geneid)]
-  ) %>% 
-  filter(!is.na(locus)) %>% 
-  group_by(locus) %>% 
-  mutate(locus = paste0(locus, ' (n = ', n_distinct(Geneid) ,')')) %>% 
-  group_by(stage, 
-           locus) %>% 
-  dplyr::summarise(total_tpm = sum(tpm)) %>%
-  arrange(
-          desc(locus),
-          total_tpm
-) %>% 
-  mutate(locus = factor(locus, levels = unique(locus)))
-  
-  stacked_max <- tpm_data_locus %>% 
-    ungroup %>% 
-    group_by(stage) %>% 
-    dplyr::summarise(max_tpm = sum(total_tpm)) %>% 
-    .$max_tpm %>% 
-    max
-  
-  max_tpm <- c(
-    seq(
-      0,
-      mround(
-        stacked_max,
-        500),
-      length.out = 11)
-  )
-
-(y <- ggplot(data = tpm_data_locus) +
-  geom_bar_pattern(
-    aes(
-      x = stage,
-      y = total_tpm, 
-      fill = locus,
-      group = stage,
-      pattern = locus
-    ),
-    position = 'fill',
-    stat = 'identity',
-    colour = 'black',
-    size = 0.1,
-        pattern_density = 0.05,
-    pattern_spacing = 0.1,
-    pattern_key_scale_factor = 0.1
-    #  pattern_density = 0.1,
-    # pattern_spacing = 0.1,
-    # pattern_key_scale_factor = 0.5
-  ) +
-  scale_pattern_manual(
-    values = rep(c('none', 
-                   'circle',
-                   'stripe'), 
-                 each = length(c(cbPalette, 
-                                 'red', 
-                                 'white')), 
-                 length.out = length(unique(tpm_data_locus$locus))),
-    labels = unique(tpm_data_locus$locus),
-    guide = guide_legend(reverse = TRUE),
-    name = 'locus'
-  ) +
-  scale_fill_manual(
-    breaks = unique(tpm_data_locus$locus),
-    values = rep_len(c(cbPalette, 
-                       'red', 
-                       'white'),
-                     length.out = length(unique(tpm_data_locus$locus))),
-    labels =  unique(tpm_data_locus$locus),
-    guide = guide_legend(reverse = TRUE),
-    name = 'locus'
-  ) +
-  scale_color_manual('black') +
-  scale_size(range = c(0,3)) +
-  ylab(
-    bquote('total '~italic(.('pir'))~' TPM')
-  ) +
-  facet_grid(.~stage,
-             scales = "free_x",
-             space = "free_x") +
-  scale_x_discrete(expand=expand_scale(add=1)) +
-  theme_classic() +
-  theme(
-    axis.title.x=element_blank(),
-    axis.text.x=element_blank(),
-    axis.ticks.x = element_blank(),
-    # axis.line.x = element_blank(),
-    axis.text.y = element_text(size = 10),
-    axis.title.y = element_text(size = 10),
-    legend.title = element_blank(),
-    legend.text = element_text(size = 8),
-    legend.key.size = unit(3,'mm'),
-    legend.key.width = unit(2,'mm'),
-    strip.text.x = element_text(size=8,
-                                face = 'bold',
-                                angle = 90),
-    strip.background = element_rect(
-      color="black",
-      size=0.1,
-      linetype="solid"
-    ),
-    panel.spacing.x = unit(0, "null")
-  ))
-
-  #This bit is to change the colour of the facet boxes
-
-  g <- ggplot_gtable(ggplot_build(y))
-  strip_t <- which(grepl('strip-t', g$layout$name))
-  stage_vec <- unique(
-
-    levels(tpm_data$stage)
-  )
-  fills <- case_when(str_detect(stage_vec, pattern = 'Asex') ~ 'coral1' ,
-                     str_detect(stage_vec, pattern = 'Liv') ~ 'plum2',
-                     str_detect(stage_vec, pattern = 'Gam') ~ 'lightskyblue1',
-                     str_detect(stage_vec, pattern  = 'Bld|Sporo|Ook') ~ 'lightgreen')
-  k <- 1
-  for (i in strip_t) {
-    j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
-    g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
-    k <- k+1
-  }
-
-  grid.newpage()
-  grid.draw(g)
-```
-## Gametocyte marker gene expression - supp figure
+## Gametocyte marker gene expression - supp figure 2
 
 ```{r}
 list_genes <- c(
