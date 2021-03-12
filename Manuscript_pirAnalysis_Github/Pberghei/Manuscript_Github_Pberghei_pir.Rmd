@@ -17,8 +17,6 @@ knitr::opts_chunk$set(echo = FALSE, results = TRUE, message = FALSE, warning = F
 knitr::opts_knit$set(root.dir = 
                        ".")
 options(scipen = 999) # Means that numbers are displayed normally not as 1e6 (1000000)
-# getwd()
-
 ```
 
 ```{r load_packages, include = FALSE, message = FALSE}
@@ -62,16 +60,19 @@ select <- dplyr::select
 ```
 
 ```{r function_mround}
+#Make nicer numbers rounded up, useful for making scales for a plot.
 mround <- function(x,base){ 
   base*ceiling(x/base) 
 } 
 ```
 
 ```{r function_my_max}
-my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) #max robust to NAs
+#max robust to NAs
+my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) 
 ```
 
 ```{r function_uniquify}
+#Make unique identifiers from a vector of names by appending '_X' where X is the number of the 'replicate'.
 uniquify <- function(vector_names, first_one = TRUE){
   new_vector <- c()
   df_num <- data.frame(names = unique(vector_names), rep = 1)
@@ -105,6 +106,7 @@ firstup <- function(x) {
 ```
 
 ```{r function_ordering}
+#Use an order_vector of partial string matches to order.
 ordering = function(to_order, order_vector){
   order = unlist(sapply(order_vector, 
                         function(x){unique(str_subset(to_order, 
@@ -124,7 +126,7 @@ r_order_vector <- str_replace_all(order_vector,
 
 ```{r tpm, results='hide'}
 
-# We need to write a function to calculate the TPM from the count data we have generated. This function uses the _lengths.transcript_ object created in the chunk above and should generate errors if it detects discrepencies between the Geneids so that the wrong transcript length is not used.
+# We need to write a function to calculate the TPM from the count data we have generated. This function uses the _lengths.transcript_ object and should generate errors if it detects discrepancies between the Geneids so that the wrong transcript length is not used.
 
 tpm = function(count_data,lengths) {
   
@@ -175,9 +177,9 @@ tpm = function(count_data,lengths) {
 ```
 
 
-```{r pir/fam_id, message=FALSE, results='hide'}
+```{r pir_id, message=FALSE, results='hide'}
 
-# Getting the pir/fam gene names and transcript lengths needed for calculating the transcript-per-million
+# Getting the pir gene names and transcript lengths needed for calculating the transcript-per-million
 
 # First we need to get the _pir gene names. These have been downloaded using a search of PlasmoDB P. berghei ANKA genome v3 using  "\*pir\*" search and manual removal of genes which clearly were not pir.
 
@@ -350,7 +352,7 @@ expt_tpms <- lapply(
 )
 names(expt_tpms) <- expt_nams
 
-#Remove the Caldelari 6h samples, as they did in their paper.
+#Remove the Caldelari (E06) 6h samples, as they did in their paper.
 
 expt_tpms$E06$tpm <- select_at(expt_tpms$E06$tpm,
                                           vars(-matches('Liv-6h')))
