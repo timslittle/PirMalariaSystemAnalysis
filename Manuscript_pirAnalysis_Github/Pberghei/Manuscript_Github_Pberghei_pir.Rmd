@@ -1,7 +1,7 @@
 ---
 title: "P.berghei pir analysis"
 author: "Timothy Little"
-date: "05/01/2021"
+date: "12/03/2021"
 output: 
   html_document:
     toc: true
@@ -15,7 +15,7 @@ output:
 knitr::opts_chunk$set(echo = FALSE, results = TRUE, message = FALSE, warning = FALSE)
 # Set below to your own working directory.
 knitr::opts_knit$set(root.dir = 
-                       "/Users/littlet/Dropbox (The Francis Crick)/Data/Manuscript_pirAnalysis_Github/Pberghei")
+                       ".")
 options(scipen = 999) # Means that numbers are displayed normally not as 1e6 (1000000)
 # getwd()
 
