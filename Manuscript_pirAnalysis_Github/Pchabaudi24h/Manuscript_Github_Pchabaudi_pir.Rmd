@@ -319,7 +319,196 @@ names(clade_col_num) <- sapply(names(clade_col),
 
 ```
 
-### 2D plot of PC1 v PC2 - Supp figure 4A
+
+## Figure 3c and Supp figure 3 - Highest expressed all _pir_ heatmap
+
+```{r highest_expressed_stage_heatmap_fig3b}
+
+num_SorL <- cir_info %>% 
+  group_by(SorL) %>% 
+  summarise(num = n_distinct(Gene.ID))
+
+labels_SorL <- setNames(paste0(num_SorL$SorL, ' (n = ', num_SorL$num, ')'),
+                        num_SorL$SorL)
+
+# Get order of pir genes by highest expressed genes in each sample.
+
+combined_data_pir_ht_list <- lapply(names(twentyfour_avgtpm), 
+       function(list_name){
+         
+         combined_data_pir <- getElement(twentyfour_avgtpm, 
+                                     list_name)$tpm %>% 
+           filter(Geneid %in% cir_id) %>% 
+           column_to_rownames(var = 'Geneid')
+         
+         #Ordering that a more understandable order
+         
+         combined_data_pir <- combined_data_pir[,c(ordering(colnames(combined_data_pir)[-1], 
+                                                            order_vector)),
+                                                drop = FALSE]
+         
+         combined_data_ordered <- tibble(Geneid = names(apply(combined_data_pir, 1, mean)),
+                                         means = apply(combined_data_pir, 1, mean),
+                                         subfam = cir_info$SorL[match(names(apply(combined_data_pir, 1, mean)), 
+                                                                            cir_info$Geneid)]) %>% 
+           filter(means > 1) %>% 
+           arrange(subfam, 
+                   desc(means)) %>% 
+           .$Geneid
+         
+         #Order the heatmap data by the order defined above (SorL, then mean expression).
+         combined_data_pir_ht <- combined_data_pir[
+           order(
+             match(rownames(combined_data_pir),
+                   combined_data_ordered),
+             na.last = NA #Remove NAs
+           ),
+         ]
+         
+         #Change the colnames to the times
+         colnames(combined_data_pir_ht) <- str_extract(colnames(combined_data_pir_ht),
+                                                                           pattern = '[[:digit:]]{2}h')
+         
+         #Order by time point
+         combined_data_pir_ht <- combined_data_pir_ht[,order(colnames(combined_data_pir_ht)),
+                                                      drop = FALSE] 
+         #Add a column for the SorL
+         combined_data_pir_ht$SorL <- cir_info$SorL[match(names(apply(combined_data_pir_ht, 1, mean)), 
+                                                                cir_info$Geneid)]
+         
+         return(combined_data_pir_ht)
+       })
+names(combined_data_pir_ht_list) <- names(twentyfour_avgtpm)
+
+maxcol <- ceiling(
+  max(
+    unlist(
+      lapply(combined_data_pir_ht_list,
+             function(list_element){
+               max(
+                 log2(1+list_element[!colnames(list_element) %in% 'SorL'])
+               )
+             }
+      )
+    )
+  )
+)
+
+lapply(names(combined_data_pir_ht_list),
+       function(list_name_to_order){
+         
+         combined_data_pir_ht <- getElement(combined_data_pir_ht_list,
+                                            list_name_to_order)
+         
+         pir_highest_tpm_order <- rownames(combined_data_pir_ht)
+         
+         #Sub-family annotation
+         clade_info <- combined_data_pir_ht$SorL
+         annotation_col <- SorL_col
+         
+         #Subfamily annotation
+         
+         clade_ha <- rowAnnotation(
+           'sub-family' = anno_simple(
+             clade_info,
+             col = annotation_col,
+           ),
+           annotation_name_gp = gpar(fontsize = 10)
+         )
+         
+         anc_ha <- rowAnnotation(foo = anno_mark(at =  na.omit(match(clade_info, 'ancestral')) , 
+                                                 labels = 'ancestral',
+                                                 labels_gp = gpar(fontsize = 7),
+                                                 link_width = unit(3, "mm")))
+         
+         #lapply across the datasets now, for each order
+         ht_list <- lapply(names(combined_data_pir_ht_list),
+                           function(list_name){
+                             
+                             combined_data_pir_ht <- getElement(twentyfour_avgtpm, 
+                                                                list_name)$tpm %>% 
+                               column_to_rownames(var = 'Geneid')
+                             
+                             #Get the times instead of the stage names.
+                             colnames(combined_data_pir_ht) <- str_extract(colnames(combined_data_pir_ht),
+                                                                           pattern = '[[:digit:]]{2}h')
+                             
+                             combined_data_pir_ht <- combined_data_pir_ht[,order(colnames(combined_data_pir_ht)),
+                                                                          drop = FALSE] 
+                             
+                             
+                             Heatmap(
+                               log2(1+combined_data_pir_ht)[pir_highest_tpm_order,],
+                               cluster_rows = FALSE,
+                               cluster_columns = FALSE,
+                               show_row_names = FALSE,
+                               name = 'log(TPM+1)', 
+                               col = colorRamp2(c(0,
+                                                  maxcol/4,
+                                                  maxcol/2,
+                                                  3*maxcol/4,
+                                                  maxcol),
+                                                viridis(5)),
+                               na_col = 'white', 
+                               border = TRUE,
+                               border_gp = gpar(lwd = 0.1),
+                               column_names_gp = gpar(fontsize = 10),
+                               row_dend_width = unit(3, "cm"),
+                               width = unit(4.5, 'cm'),
+                               height = unit(7,'cm'),
+                               row_title = NULL,
+                               left_annotation = if(
+                                 list_name %in% dplyr::first(names(combined_data_pir_ht_list))
+                               ){
+                                 clade_ha
+                               }else{
+                                 NULL
+                               },
+                               right_annotation = if(
+                                 list_name %in% dplyr::last(names(combined_data_pir_ht_list))
+                               ){
+                                 anc_ha
+                               }else{
+                                 NULL
+                               },
+                               # row_split =  cir_info$SorL[match(pir_highest_tpm_order, 
+                               #                                        cir_info$Geneid)],
+                               column_title = paste(list_name),
+                               heatmap_legend_param = list(
+                                 labels_gp = gpar(fontsize = 10),
+                                 title_gp = gpar(fontsize = 10,
+                                                 fontface = 'bold'),
+                                 at = c(0,
+                                        maxcol/4,
+                                        maxcol/2,
+                                        3*maxcol/4,
+                                        maxcol)
+                               )
+                             )
+                           }
+         )
+         ht_list <- Reduce(`+`, ht_list)
+         clade_lgd <- Legend(
+           title = 'sub-family',
+           at = labels_SorL,
+           legend_gp = gpar(fill = SorL_col)
+         )
+
+         return(
+           draw(ht_list, 
+                row_title_side = 'left',
+                column_title_side = 'bottom',
+                heatmap_legend_side = 'right',
+                annotation_legend_side = 'right',
+                annotation_legend_list = list(clade_lgd),
+                ht_gap = unit(.35,'cm'),
+                merge_legend = TRUE
+           ))
+       })
+
+```
+
+## 2D plot of PC1 v PC2 - Supp figure 4A
 
 ```{r pca_calculation, results = TRUE}
 twentyfour_tpm <- twentyfour_ct_comb
@@ -449,7 +638,7 @@ twentyfour_z <- lapply(twentyfour_avgtpm,
 ###
 ```
 
-# Phaseograms of the data.
+# Phaseograms of all the genes in both transmission methods - supplementary figure 5.
 
 ```{r row_order_phaseograms}
 
@@ -814,7 +1003,7 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
 
 ```
 
-## Phaseograms of the _cir_ genes with clade annotations.
+## Phaseograms of the _cir_ genes with clade annotations. - Supplementary figure 6
 
 ```{r pir_gene_phaseogram_breaks}
   max_tpm <- lapply(twentyfour_z, 
@@ -913,232 +1102,6 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
                     tpm_mat = FALSE)
 
 ```
-
-## Figure 3b - Highest expressed all _pir_ heatmap
-
-```{r highest_expressed_stage_heatmap_fig3b}
-
-num_SorL <- cir_info %>% 
-  group_by(SorL) %>% 
-  summarise(num = n_distinct(Gene.ID))
-
-labels_SorL <- setNames(paste0(num_SorL$SorL, ' (n = ', num_SorL$num, ')'),
-                        num_SorL$SorL)
-
-# Get order of pir genes by highest expressed genes in each sample.
-
-combined_data_pir_ht_list <- lapply(names(twentyfour_avgtpm), 
-       function(list_name){
-         
-         combined_data_pir <- getElement(twentyfour_avgtpm, 
-                                     list_name)$tpm %>% 
-           filter(Geneid %in% cir_id) %>% 
-           column_to_rownames(var = 'Geneid')
-         
-         #Ordering that a more understandable order
-         
-         combined_data_pir <- combined_data_pir[,c(ordering(colnames(combined_data_pir)[-1], 
-                                                            order_vector)),
-                                                drop = FALSE]
-         
-         combined_data_ordered <- tibble(Geneid = names(apply(combined_data_pir, 1, mean)),
-                                         means = apply(combined_data_pir, 1, mean),
-                                         subfam = cir_info$SorL[match(names(apply(combined_data_pir, 1, mean)), 
-                                                                            cir_info$Geneid)]) %>% 
-           filter(means > 1) %>% 
-           arrange(subfam, 
-                   desc(means)) %>% 
-           .$Geneid
-         
-         #Order the heatmap data by the order defined above (SorL, then mean expression).
-         combined_data_pir_ht <- combined_data_pir[
-           order(
-             match(rownames(combined_data_pir),
-                   combined_data_ordered),
-             na.last = NA #Remove NAs
-           ),
-         ]
-         
-         #Change the colnames to the times
-         colnames(combined_data_pir_ht) <- str_extract(colnames(combined_data_pir_ht),
-                                                                           pattern = '[[:digit:]]{2}h')
-         
-         #Order by time point
-         combined_data_pir_ht <- combined_data_pir_ht[,order(colnames(combined_data_pir_ht)),
-                                                      drop = FALSE] 
-         #Add a column for the SorL
-         combined_data_pir_ht$SorL <- cir_info$SorL[match(names(apply(combined_data_pir_ht, 1, mean)), 
-                                                                cir_info$Geneid)]
-         
-         return(combined_data_pir_ht)
-       })
-names(combined_data_pir_ht_list) <- names(twentyfour_avgtpm)
-
-maxcol <- ceiling(
-  max(
-    unlist(
-      lapply(combined_data_pir_ht_list,
-             function(list_element){
-               max(
-                 log2(1+list_element[!colnames(list_element) %in% 'SorL'])
-               )
-             }
-      )
-    )
-  )
-)
-
-lapply(names(combined_data_pir_ht_list),
-       function(list_name_to_order){
-         
-         combined_data_pir_ht <- getElement(combined_data_pir_ht_list,
-                                            list_name_to_order)
-         
-         pir_highest_tpm_order <- rownames(combined_data_pir_ht)
-         
-         #Sub-family annotation
-         clade_info <- combined_data_pir_ht$SorL
-         annotation_col <- SorL_col
-         
-         #Subfamily annotation
-         
-         clade_ha <- rowAnnotation(
-           'sub-family' = anno_simple(
-             clade_info,
-             col = annotation_col,
-           ),
-           annotation_name_gp = gpar(fontsize = 10)
-         )
-         
-         anc_ha <- rowAnnotation(foo = anno_mark(at =  na.omit(match(clade_info, 'ancestral')) , 
-                                                 labels = 'ancestral',
-                                                 labels_gp = gpar(fontsize = 7),
-                                                 link_width = unit(3, "mm")))
-         
-         #lapply across the datasets now, for each order
-         ht_list <- lapply(names(combined_data_pir_ht_list),
-                           function(list_name){
-                             
-                             combined_data_pir_ht <- getElement(twentyfour_avgtpm, 
-                                                                list_name)$tpm %>% 
-                               column_to_rownames(var = 'Geneid')
-                             
-                             #Get the times instead of the stage names.
-                             colnames(combined_data_pir_ht) <- str_extract(colnames(combined_data_pir_ht),
-                                                                           pattern = '[[:digit:]]{2}h')
-                             
-                             combined_data_pir_ht <- combined_data_pir_ht[,order(colnames(combined_data_pir_ht)),
-                                                                          drop = FALSE] 
-                             
-                             
-                             Heatmap(
-                               log2(1+combined_data_pir_ht)[pir_highest_tpm_order,],
-                               cluster_rows = FALSE,
-                               cluster_columns = FALSE,
-                               show_row_names = FALSE,
-                               name = 'log(TPM+1)', 
-                               col = colorRamp2(c(0,
-                                                  maxcol/4,
-                                                  maxcol/2,
-                                                  3*maxcol/4,
-                                                  maxcol),
-                                                viridis(5)),
-                               na_col = 'white', 
-                               border = TRUE,
-                               border_gp = gpar(lwd = 0.1),
-                               column_names_gp = gpar(fontsize = 10),
-                               row_dend_width = unit(3, "cm"),
-                               width = unit(4.5, 'cm'),
-                               height = unit(7,'cm'),
-                               row_title = NULL,
-                               left_annotation = if(
-                                 list_name %in% dplyr::first(names(combined_data_pir_ht_list))
-                               ){
-                                 clade_ha
-                               }else{
-                                 NULL
-                               },
-                               right_annotation = if(
-                                 list_name %in% dplyr::last(names(combined_data_pir_ht_list))
-                               ){
-                                 anc_ha
-                               }else{
-                                 NULL
-                               },
-                               # row_split =  cir_info$SorL[match(pir_highest_tpm_order, 
-                               #                                        cir_info$Geneid)],
-                               column_title = paste(list_name),
-                               heatmap_legend_param = list(
-                                 labels_gp = gpar(fontsize = 10),
-                                 title_gp = gpar(fontsize = 10,
-                                                 fontface = 'bold'),
-                                 at = c(0,
-                                        maxcol/4,
-                                        maxcol/2,
-                                        3*maxcol/4,
-                                        maxcol)
-                               )
-                             )
-                           }
-         )
-         ht_list <- Reduce(`+`, ht_list)
-         clade_lgd <- Legend(
-           title = 'sub-family',
-           at = labels_SorL,
-           legend_gp = gpar(fill = SorL_col)
-         )
-
-         return(
-           draw(ht_list, 
-                row_title_side = 'left',
-                column_title_side = 'bottom',
-                heatmap_legend_side = 'right',
-                annotation_legend_side = 'right',
-                annotation_legend_list = list(clade_lgd),
-                ht_gap = unit(.35,'cm'),
-                merge_legend = TRUE
-           ))
-       })
-
-```
-
-```{r figure_3b_suppinfo}
-
-combined_data_pir_ht <- getElement(combined_data_pir_ht_list,
-                                            'rMT')
-         
-         pir_highest_tpm_order <- rownames(combined_data_pir_ht)
-
-supp_info_fig_3b <- lapply(names(combined_data_pir_ht_list),
-       function(list_name){
-         
-         combined_data_pir_ht <- getElement(twentyfour_avgtpm, 
-                                            list_name)$tpm %>% 
-           column_to_rownames(var = 'Geneid')
-         
-         #Get the times instead of the stage names.
-         colnames(combined_data_pir_ht) <- str_extract(colnames(combined_data_pir_ht),
-                                                       pattern = '[[:digit:]]{2}h')
-         
-         combined_data_pir_ht <- combined_data_pir_ht[,order(colnames(combined_data_pir_ht)),
-                                                      drop = FALSE] 
-         
-         colnames(combined_data_pir_ht) <- paste0(list_name, 
-                                                  '_', 
-                                                  colnames(combined_data_pir_ht))
-         
-         log2(1+combined_data_pir_ht)[pir_highest_tpm_order,]
-       }) %>% 
-  bind_cols
-
-supp_info_fig_3b$SorL <- cir_info$SorL[match(names(apply(supp_info_fig_3b, 1, mean)), 
-                                                   cir_info$Geneid)]
-
-head(supp_info_fig_3b)
-
-```
-
-
 
 ## Figure 4 and supplementary figure 7/8
 
