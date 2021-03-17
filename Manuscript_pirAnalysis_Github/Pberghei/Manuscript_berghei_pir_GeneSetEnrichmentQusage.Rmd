@@ -27,6 +27,8 @@ knitr::opts_knit$set(root.dir =
 
 # Change options so that numbers are displayed with all the zeros (e,g, as 1000000 not 1e6)
 options(scipen = 999) 
+
+set.seed(89)
 ```
 
 ```{r load_packages}
@@ -41,12 +43,10 @@ library('stringr')
 library('RColorBrewer')
 ```
 
-Download the data, and remove heterogeneous life cycle stages like 'Gam' and 'BldMl'. Will keep Asex.Mixed since we want to be able to compare that to other stages, although for each Asex stage we should remove the individual stages (like Rings) when looking at mixed, and the Mixed stages when looking at the inidvidual stages.
+Download the data, and remove heterogeneous life cycle stages like 'Gam' and 'BldMl'. Will keep Asex.Mixed since we want to be able to compare that to other stages, although for each Asex stage we should remove the individual stages (like Rings) when looking at mixed, and the Mixed stages when looking at the individual stages.
 
-Initially I used counts here but I don't know if I made that up or not... Going to try with log(TPM+1).
 
 ```{r read_count_data}
-# berg_counts <- read_xlsx('Manuscript_Frontiers_Counts_UpdatedNames.xlsx')
 
 berg_tpm <- read_xlsx('Manuscript_Frontiers_SuppInfo_berghei.xlsx',
                       sheet = 'berg_TPM_allExpts_bioReps') %>% 
@@ -338,23 +338,4 @@ x <- ggplot(berghei_comparison_stats_df,
 berghei_comparison_stats_df
 ```
 
-
-```{r binom_glm}
-berghei_tpm <- read_xlsx('Manuscript_Frontiers_SuppInfo_berghei.xlsx',
-                      sheet = 2) %>% 
-  melt(value.name = 'tpm', 
-       variable.name = 'stage') %>% 
-  mutate(experiment = as.factor(
-    str_extract(stage, 
-                pattern = '^Expt[[:digit:]]{2}')
-    ),
-stage = as.factor(
-  str_extract(stage, 
-              pattern = '(?<=Expt[[:digit:]]{2}_).+(?=_[[:digit:]]{1,2})')
-  ),
-Geneid = as.factor(Geneid),
-tpm = as.factor(tpm)
-)
-
-```
 

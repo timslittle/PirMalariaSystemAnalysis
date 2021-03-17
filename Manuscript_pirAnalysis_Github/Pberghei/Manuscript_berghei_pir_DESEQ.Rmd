@@ -14,6 +14,9 @@ output:
 Using the P. berghei systematic analysis of pir gene expression data we want to perform statistical tests for enrichment of individual pirs in certain stages of the malaria life cycle, using the package DESEQ2.
 
 Notes:
+* Have to remove Cook's distance cut off when looking at gene PBANKA_0600031 because otherwise DESEQ says that it is an outlier, from the data itself I'm not sure if I agree.
+
+Future:
 * Would be worth looking at http://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#levels-without-samples to see if we can incorporate the experiment values into this too.
 
 ```{r setup, include=FALSE}
@@ -25,6 +28,8 @@ knitr::opts_knit$set(root.dir =
 
 # Change options so that numbers are displayed with all the zeros (e,g, as 1000000 not 1e6)
 options(scipen = 999) 
+
+set.seed(8)
 ```
 
 ```{r load_packages}
@@ -44,7 +49,7 @@ Download the data, and remove heterogeneous life cycle stages like 'Gam' and 'Bl
 Note that I'm using the count data with names updated by how I combined similar stages e.g. Liver.post48h.
 
 ```{r read_count_data}
-berg_counts <- read_xlsx('Manuscript_Frontiers_Counts_UpdatedNames.xlsx')
+berg_counts <- read_xlsx('Manuscript_Frontiers_suppinfo_bergheiCounts_UpdatedNames.xlsx')
 
 #Filter low expressed genes (less than 1 count in all samples), convert to a matrix, add 1 for the log transformation, then transform to log2
 berg_counts <- column_to_rownames(berg_counts, var = 'Geneid') %>% 
@@ -96,15 +101,19 @@ gamMale_v_asexMixed_df <- as.data.frame(
   mutate(contrast = coef)
 ```
 
-
 ```{r}
 coef <- "stage_Liv.Meroz_vs_Asex.Mixed"
+res <- results(dds.deseq,
+               name = 'stage_Liv.Meroz_vs_Asex.Mixed',
+               cooksCutoff = FALSE)
 dds.deseq.livMeroz_v_asexMixed.lfcShr <- lfcShrink(dds.deseq, 
                                                   coef = coef,
+                                                  res = res,
                                                   type = "apeglm")
 
 livMeroz_v_asexMixed_df <- as.data.frame(
-  dds.deseq.livMeroz_v_asexMixed.lfcShr[rownames(dds.deseq.gamMale_v_asexMixed.lfcShr) %in% c('PBANKA_0100500','PBANKA_0600031'),]) %>%  
+  dds.deseq.livMeroz_v_asexMixed.lfcShr[rownames(dds.deseq.gamMale_v_asexMixed.lfcShr) %in% c('PBANKA_0100500',
+                                                                                              'PBANKA_0600031'),]) %>%  
   mutate(contrast = coef)
 ```
 
@@ -129,15 +138,20 @@ resultsNames(dds.maleGam.deseq)
 
 ```{r}
 coef <- "stage_Liv.Meroz_vs_Gam.Male"
+res <- results(dds.maleGam.deseq,
+               name = 'stage_Liv.Meroz_vs_Gam.Male',
+               cooksCutoff = FALSE)
 dds.maleGam.deseq.livMeroz_v_gamMale.lfcShr <- lfcShrink(dds.maleGam.deseq, 
                                                          coef = coef,
+                                                         res= res,
                                                          type = "apeglm")
 
-livMeroz_v_gamMale_df <- as.data.frame(
+(livMeroz_v_gamMale_df <- as.data.frame(
   dds.maleGam.deseq.livMeroz_v_gamMale.lfcShr[rownames(dds.maleGam.deseq.livMeroz_v_gamMale.lfcShr) %in% c('PBANKA_0317181',
                                                                                                            'PBANKA_0100500',
-                                                                                                           'PBANKA_0600031'),]) %>%  
-  mutate(contrast = coef)
+                                                                                                           'PBANKA_0600031'),]
+  ) %>%  
+  mutate(contrast = coef))
 ```
 
 
