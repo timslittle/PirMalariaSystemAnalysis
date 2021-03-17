@@ -942,7 +942,7 @@ breaks <- seq(0, 100, by = 10)
 )
 ```
 
-```{r heatmap_with_tree_figure3b}
+```{r heatmap_with_tree_figure6}
 
 p <- gheatmap(tr, 
               ancestral_data, 
