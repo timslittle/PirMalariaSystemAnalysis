@@ -1,7 +1,7 @@
 ---
 title: "Manuscript_Github_Pchabaudi_pir"
 author: "Timothy Little"
-date: "12/03/2021"
+date: "22/03/2021"
 output: html_document
 ---
 
@@ -119,7 +119,6 @@ tpm = function(count_data, lengths = chabaudi_transcript_lengths) {
 }
 ```
 
-
 ```{r function_mround}
 mround <- function(x,base){ 
   base*ceiling(x/base) 
@@ -196,79 +195,6 @@ times_stages_table$r_stage_diff_count <- str_replace_all(times_stages_table$stag
                                                          replacement = '\\.')
 ```
 
-```{r read_tpm_rescaled_data}
-
-chab_count_table <- read_xlsx('Manuscript_Frontiers_chabaudi_24h_counts.xlsx')
-
-twentyfour_ct_comb <- tpm(chab_count_table, 
-                          lengths = chabaudi_transcript_lengths)
-
-#Setting twentyfour_tpm_ct core dataset - remove pseudogene and re-scaled
-
-twentyfour_tpm_nopseudo <- twentyfour_ct_comb %>% 
-  filter(!Geneid %in% 'PCHAS_0420800')
-
-twentyfour_tpm_rescale_nopseudo <- lapply(colnames(twentyfour_tpm_nopseudo), 
-                                          function(column_name){
-                                            column <- getElement(twentyfour_tpm_nopseudo, 
-                                                                 paste(column_name))
-                                            if(is.numeric(column)){
-                                              #is.numeric to avoid trying to scale the Geneid column
-                                              tpm_scale_factor <- 1e6 / sum(column)
-                                              tpm_scaled <- as.numeric(column*tpm_scale_factor)
-                                            }else{
-                                              tpm_scaled <- column
-                                            }
-                                            return(tpm_scaled)
-                                          }) %>% 
-  bind_cols
-
-colnames(twentyfour_tpm_rescale_nopseudo) <- colnames(twentyfour_tpm_nopseudo)
-# apply(twentyfour_tpm_rescale_nopseudo[,-1], 2, sum)
-
-#Setting the re-scaled version as the default from now on
-#Setting twentyfour_tpm_ct core dataset - removed pseudogene and re-scaled
-twentyfour_ct_comb <- twentyfour_tpm_rescale_nopseudo
-
-twentyfour_rMT <- select(twentyfour_ct_comb, 
-                         matches('Geneid|rMT')) %>% 
-  rename_with(~ str_extract(.x,pattern = '(?<=rMT_).+'),
-              matches('rMT'))
-
-twentyfour_rMT_avg <- melt(twentyfour_rMT, 
-                           variable.name = 'sample',
-                           value.name = 'tpm') %>% 
-  mutate(stage = str_extract(sample, pattern = '.+(?=_[[:digit:]])')) %>% 
-  group_by(Geneid, stage) %>% 
-  summarise(mean_tpm = mean(tpm)) %>% 
-  dcast(Geneid ~ stage)
-
-twentyfour_SBP <- select(twentyfour_ct_comb, 
-                         matches('Geneid|SBP')) %>% 
-  rename_with(~ str_extract(.x,pattern = '(?<=SBP_).+'),
-              matches('SBP'))
-
-twentyfour_SBP_avg <- melt(twentyfour_SBP, 
-                           variable.name = 'sample',
-                           value.name = 'tpm') %>% 
-  mutate(stage = str_extract(sample, pattern = '.+(?=_[[:digit:]])')) %>% 
-  group_by(Geneid, stage) %>% 
-  summarise(mean_tpm = mean(tpm)) %>% 
-  dcast(Geneid ~ stage)
-
-twentyfour_avgtpm <- list(
-  'rMT' = list(
-    tpm = twentyfour_rMT_avg,
-    experiment = 'rMT'
-  ),
-  'SBP' = list(
-    tpm = twentyfour_SBP_avg,
-    experiment = 'SBP'
-  )
-)
-
-```
-
 ```{r colours_clades_phase}
 SorL_col <- setNames(
   c(    '#F0E442',
@@ -319,8 +245,7 @@ names(clade_col_num) <- sapply(names(clade_col),
 
 ```
 
-
-## Figure 3c and Supp figure 3 - Highest expressed all _pir_ heatmap
+## Figure 3c - Highest expressed all _pir_ heatmap
 
 ```{r highest_expressed_stage_heatmap_fig3b}
 
