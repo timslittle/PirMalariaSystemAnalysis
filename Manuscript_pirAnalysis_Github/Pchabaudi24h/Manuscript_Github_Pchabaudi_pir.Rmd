@@ -195,6 +195,20 @@ times_stages_table$r_stage_diff_count <- str_replace_all(times_stages_table$stag
                                                          replacement = '\\.')
 ```
 
+```{r read_TPM}
+#Need to use the calculateTPM script first.
+
+twentyfour_rMT <- read_csv('Pchabaudi_TPM_allBioReps.csv')
+
+twentyfour_avgtpm <- list(
+  'rMT' = list(
+    tpm = read_csv('Pchabaudi_TPM_average.csv'),
+    experiment = 'rMT'
+  )
+)
+
+```
+
 ```{r colours_clades_phase}
 SorL_col <- setNames(
   c(    '#F0E442',
