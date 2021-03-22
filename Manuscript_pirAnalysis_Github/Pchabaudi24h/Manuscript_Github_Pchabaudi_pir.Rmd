@@ -179,7 +179,7 @@ cir_clade_info <- read_delim('../standard_files/Pchabaudi_pir_clades.txt',
 ```
 
 ```{r times_stages_labels}
-#Use the rMT stage differential count in order to name the samples, but keep time to retain order
+#Use the RMT stage differential count in order to name the samples, but keep time to retain order
 times_stages_table <- data.frame(time = c('02h', '05h', '08h', '11h', '14h', '17h','20h','23h'),
                                  stage_diff_count = c('Late-Rings',
                                                       'Rings-Troph-conversion',
@@ -201,9 +201,9 @@ times_stages_table$r_stage_diff_count <- str_replace_all(times_stages_table$stag
 twentyfour_rMT <- read_csv('Pchabaudi_TPM_allBioReps.csv')
 
 twentyfour_avgtpm <- list(
-  'rMT' = list(
+  'RMT' = list(
     tpm = read_csv('Pchabaudi_TPM_average.csv'),
-    experiment = 'rMT'
+    experiment = 'RMT'
   )
 )
 
@@ -450,7 +450,7 @@ lapply(names(combined_data_pir_ht_list),
 ## 2D plot of PC1 v PC2 - Supp figure 4A
 
 ```{r pca_calculation, results = TRUE}
-twentyfour_tpm <- twentyfour_ct_comb
+twentyfour_tpm <- twentyfour_rMT
 rownames_geneid <- twentyfour_tpm$Geneid
 twentyfour_tpm_forpca <- select(twentyfour_tpm, -Geneid)
 rownames(twentyfour_tpm_forpca) <- rownames_geneid
@@ -467,8 +467,7 @@ twentyfour_tpm_pca_coords <- data.frame(sample = rownames(twentyfour_tpm_pca_var
                                         PC3 = twentyfour_tpm_pca_coords$Dim.3,
                                         PC2 = twentyfour_tpm_pca_coords$Dim.2) %>% 
   dplyr::mutate(stage = gsub(sample, pattern = '_[[:digit:]]$', replacement = '')) %>% 
-  dplyr::mutate(time = str_split_fixed(stage, pattern = '_', n = 2)[,2]) %>% 
-  dplyr::mutate(transmission = str_split_fixed(sample, pattern = '_', n = 3)[,1])
+  dplyr::mutate(time = str_split_fixed(stage, pattern = '_', n = 2)[,1]) 
 
 colornames <- viridis(length(unique(twentyfour_tpm_pca_coords$time)))
 colornames <- setNames(colornames, 
@@ -485,18 +484,11 @@ pc3_importance <- round(pca_importance$PC3[2]*100, digits = 1)
                  aes(
                    x = PC1,
                    y = PC2,
-                   col = time,
-                   shape = transmission
+                   col = time
                  )) +
     geom_point(size = 3,
                alpha = 0.8) +
     scale_color_manual(values = colornames) +
-    scale_shape_manual(
-      values = setNames(
-        c(17,19),
-        unique(twentyfour_tpm_pca_coords$transmission)
-      )
-    ) +
     xlab(paste0('PC1 ', round(pca_importance$PC1[2]*100, digits = 1),'%')) +
     ylab(paste0('PC2 ', round(pca_importance$PC2[2]*100, digits = 1),'%')) +
     guides(shape=guide_legend(ncol=2),
@@ -934,7 +926,7 @@ draw_heatmap_zscore <- function(zscore_list,
 ```{r phaseograms_whole_genome}
 
 draw_heatmap_zscore(zscore_list = twentyfour_z,
-                    gene_ordering_vector = phaseogram_time_order$rMT$zscore_order$Geneid,
+                    gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
                     use_times = TRUE,
                     use_order_vector = FALSE,
                     show_row_names = FALSE,
@@ -1018,7 +1010,7 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
 ```{r phaseograms_cir}
 
 draw_heatmap_zscore(zscore_list = twentyfour_z,
-                    gene_ordering_vector = phaseogram_time_order$rMT$zscore_order$Geneid,
+                    gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
                     filter_genes_vector = cir_id,
                     annotation_clade = 'SorL',
                     annotation_col = SorL_col,
@@ -1109,7 +1101,7 @@ limits_cir <- c(0,
 
 cir_plot_order <- cir_plot %>% 
   filter(time == '14h',
-         transmission == 'rMT') %>% 
+         transmission == 'RMT') %>% 
   arrange(desc(tpm))
 
 
@@ -1186,7 +1178,7 @@ transmissionSep_cir_plot <- function(time_vec = '14h',
                         space = "free_x",
                         labeller = labeller(subfam = function(string) {
                           str_remove_all(string, 
-                                         pattern = '(rMT|SBP)_')
+                                         pattern = '(RMT|SBP)_')
                         })) +
              theme_classic() +
              ylab('log(TPM + 1)')+
@@ -1212,7 +1204,7 @@ transmissionSep_cir_plot <- function(time_vec = '14h',
            # g$widths[5] = 2*g$widths[5]
            
            strip_t <- which(grepl('strip-t', g$layout$name))
-           subfam_vec <- sort(unique(cir_plot_filter$subfam)) %>% str_remove_all(pattern = '(rMT|SBP)_')
+           subfam_vec <- sort(unique(cir_plot_filter$subfam)) %>% str_remove_all(pattern = '(RMT|SBP)_')
            fills <- case_when(str_detect(subfam_vec, 
                                          pattern = 'a') ~ clade_col['ancestral'],
                               subfam_vec %in% names(clade_col) ~ clade_col[paste(subfam_vec)],
@@ -1361,7 +1353,7 @@ tpm_data_SorL <- twentyfour_ct_comb%>%
   mutate(stage = str_extract(sample, 
                              pattern = '(?<=\\w{3}_\\w{3}_).+(?=_[[:digit:]]$)|sch.culture')) %>%
     mutate(stage = times_stages_table$time[match(stage, times_stages_table$r_stage_diff_count)]) %>% 
-  mutate(transmission = str_extract(sample, pattern = 'rMT|SBP')) %>% 
+  mutate(transmission = str_extract(sample, pattern = 'RMT|SBP')) %>% 
   filter(stage != 'sch.culture') %>% 
   mutate(clade = cir_info$subfam[match(Geneid, 
                                             cir_info$Geneid)]) %>% 
@@ -1433,7 +1425,7 @@ tpm_data_clade <- twentyfour_ct_comb%>%
   mutate(stage = str_extract(sample, 
                              pattern = '(?<=\\w{3}_\\w{3}_).+(?=_[[:digit:]]$)|sch.culture')) %>%
   mutate(stage = times_stages_table$time[match(stage, times_stages_table$r_stage_diff_count)]) %>% 
-  mutate(transmission = str_extract(sample, pattern = 'rMT|SBP')) %>% 
+  mutate(transmission = str_extract(sample, pattern = 'RMT|SBP')) %>% 
   filter(stage != 'sch.culture') %>% 
   mutate(clade = cir_info$subfam[match(Geneid, 
                                             cir_info$Geneid)]) %>% 
@@ -1580,7 +1572,7 @@ tpm_data_SorL <- twentyfour_ct_comb%>%
   mutate(stage = str_extract(sample, 
                              pattern = '(?<=\\w{3}_\\w{3}_).+(?=_[[:digit:]]$)|sch.culture')) %>%
     mutate(stage = times_stages_table$time[match(stage, times_stages_table$r_stage_diff_count)]) %>% 
-  mutate(transmission = str_extract(sample, pattern = 'rMT|SBP')) %>% 
+  mutate(transmission = str_extract(sample, pattern = 'RMT|SBP')) %>% 
   filter(stage != 'sch.culture') %>% 
   mutate(clade = cir_info$subfam[match(Geneid, 
                                             cir_info$Geneid)]) %>% 
@@ -1653,7 +1645,7 @@ tpm_data_twentyfour <- twentyfour_ct_comb%>%
        value.name = 'tpm') %>% 
   mutate(stage = str_extract(sample, 
                              pattern = '(?<=\\w{3}_\\w{3}_).+(?=_[[:digit:]]$)|sch.culture')) %>%
-  mutate(transmission = str_extract(sample, pattern = 'rMT|SBP')) %>% 
+  mutate(transmission = str_extract(sample, pattern = 'RMT|SBP')) %>% 
   filter(stage != 'sch.culture') %>% 
   mutate(clade = cir_info$subfam[match(Geneid, 
                                             cir_info$Geneid)],
@@ -1687,7 +1679,7 @@ gene_expression_df <- twentyfour_ct_comb%>%
        value.name = 'tpm') %>% 
   mutate(stage = str_extract(sample, 
                              pattern = '(?<=\\w{3}_\\w{3}_).+(?=_[[:digit:]]$)|sch.culture')) %>%
-  mutate(transmission = str_extract(sample, pattern = 'rMT|SBP')) %>% 
+  mutate(transmission = str_extract(sample, pattern = 'RMT|SBP')) %>% 
   filter(stage != 'sch.culture') %>% 
   mutate(pir_gene = ifelse(Geneid %in% cir_id,
                            'pir',
