@@ -828,8 +828,8 @@ draw_heatmap_zscore <- function(zscore_list,
                                                                 n = 2)[,2]
                        
                        if(use_times){
-                         colnames(heatmap_data) <- times_stages_table$time[match(colnames(heatmap_data),
-                                                                                 times_stages_table$r_stage_diff_count)]
+                         colnames(heatmap_data) <- str_extract(colnames(heatmap_data), 
+                                                               pattern = '[[:digit:]]{2}h')
                        }
                        
                        if(use_order_vector){
@@ -1018,18 +1018,6 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
                     use_times = TRUE,
                     use_order_vector = FALSE,
                     show_row_names = FALSE,
-                    tpm_mat = FALSE)
-
-draw_heatmap_zscore(zscore_list = twentyfour_z,
-                    gene_ordering_vector = phaseogram_time_order$SBP$zscore_order$Geneid,
-                    filter_genes_vector = cir_id,
-                    annotation_clade = 'SorL',
-                    annotation_col = SorL_col,
-                    threshold_tpm = 1,
-                    use_times = TRUE,
-                    use_order_vector = FALSE,
-                    show_row_names = FALSE,
-                    tpm_breaks = tpm_breaks,
                     tpm_mat = FALSE)
 
 ```
