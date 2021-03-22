@@ -1225,34 +1225,28 @@ lapply(
 
 ```{r Supp_fig_AapL-ChaAPl_expression}
 
-  cir_plot <- twentyfour_ct_comb%>% 
-    filter(Geneid %in% cir_id) %>%
-    melt(id.vars = 'Geneid', 
-         variable.name = 'sample', 
-         value.name = 'tpm') %>% 
-    mutate(stage = gsub(sample, pattern = '_[[:digit:]]$', replacement = ''),
-           transmission = str_split_fixed(sample, pattern = '_', n = 3)[,1],
-           diff_count = str_split_fixed(sample, pattern = '_', n = 4)[,3],
-           time = str_split_fixed(sample, pattern = '_', n = 3)[,2],
-           subfam = cir_info$subfam[match(Geneid, cir_info$Geneid)],
-           chapl_aapl = factor(cir_info$chapl_aapl_name[match(Geneid, 
-                                                                    cir_info$Geneid)],
-                               levels = sort(unique(cir_info$chapl_aapl_name[match(Geneid, 
-                                                                                         cir_info$Geneid)])))) %>% 
-    filter(!(time %in% c('sch', 
-                         'Unknown')),
-           !is.na(chapl_aapl) ) %>% 
-    group_by(Geneid) %>% 
-    # filter(
-    #   # all(tpm < 100),
-    #   #      any(tpm > 50)
-    #   subfam == 'S7'
-    #   ) %>% 
+cir_plot <- twentyfour_rMT %>% 
+  filter(Geneid %in% cir_id) %>%
+  melt(id.vars = 'Geneid', 
+       variable.name = 'sample', 
+       value.name = 'tpm') %>% 
+  mutate(
+    stage = gsub(sample, pattern = '_[[:digit:]]$', replacement = ''),
+    diff_count = str_split_fixed(sample, pattern = '_', n = 4)[,2],
+    time = str_split_fixed(sample, pattern = '_', n = 3)[,1],
+    subfam = cir_clade_info$clade[match(Geneid, cir_clade_info$Geneid)],
+    chapl_aapl = factor(cir_info$chapl_aapl_name[match(Geneid, 
+                                                       cir_info$Geneid)],
+                        levels = sort(unique(cir_info$chapl_aapl_name[match(Geneid, 
+                                                                            cir_info$Geneid)])))) %>% 
+  filter(!(time %in% c('sch', 
+                       'Unknown')),
+         !is.na(chapl_aapl) ) %>% 
+  group_by(Geneid) %>% 
     arrange(desc(tpm)) 
   
   cir_plot_order <- cir_plot %>% 
-    filter(time == '14h',
-           transmission == 'SBP') %>% 
+    filter(time == '14h') %>% 
     arrange(desc(tpm))
     
   cir_plot <- mutate(cir_plot, 
@@ -1286,7 +1280,6 @@ lapply(
       data = cir_plot,
       mapping = aes(
         x = Geneid,
-        fill = transmission,
         y = tpm
       )
     ) +
@@ -1296,7 +1289,8 @@ lapply(
                  geom = "bar", 
                  width = 0.75, 
                  size = 0.25, 
-                 position = 'dodge') +
+                 position = 'dodge',
+                 fill = 'lightblue') +
     geom_point(stat = 'identity', 
                position = position_dodge(width = 0.75),
                size = point_size) +
