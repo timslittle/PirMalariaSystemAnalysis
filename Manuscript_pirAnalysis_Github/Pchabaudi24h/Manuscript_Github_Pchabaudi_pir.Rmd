@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = FALSE,
                       warning = FALSE)
 
 knitr::opts_knit$set(root.dir = 
-                       "/Users/littlet/Dropbox (The Francis Crick)/Data/Manuscript_pirAnalysis_Github/Pchabaudi24h")
+                       ".")
 #Note that the above doesn't give an error if the dir doesn't exist
 
 options(scipen = 999) # Means that numbers are displayed normally not as 1e6 (1000000)
@@ -60,63 +60,9 @@ arrange <- dplyr::arrange
 mutate <- dplyr::mutate
 summarise <- dplyr::summarise
 select <- dplyr::select
-```
 
-```{r tpm, results = 'hide', message = FALSE}
-# # Calculating the transcript-per-million 
-# 
-# We need to write a function to calculate the TPM from the count data we have generated. This function uses the 'chabaudi_transcript_lengths' object created in the chunk above and should generate errors if it detects discrepencies between the Geneids so that the wrong transcript length is not used.
-
-tpm = function(count_data, lengths = chabaudi_transcript_lengths) {
-  
-  #Print an error if the id columns do not match
-  # first if statement to test that both have a GeneID column
-  if(any(grepl(colnames(lengths), 
-               pattern = 'id', 
-               ignore.case = T)) == T & any(grepl(colnames(count_data), 
-                                                  pattern = 'Geneid', 
-                                                  #This needs to be Geneid when some of the samples have 'id' in them
-                                                  ignore.case = T)) == T){
-    if(all(count_data[grep(colnames(count_data), 
-                           pattern = 'Geneid', ignore.case = T)] == lengths[grep(colnames(lengths), 
-                                                                             pattern = 'id', ignore.case = T)])) {
-      print('Count data and length gene ids both match')
-    } else {
-      stop('Error: Count data and length gene ids DO NOT MATCH, please make sure they are ordered identically.')
-    }
-  } else {
-    stop('Error: Count data and/or length table supplied do not have an id column.')
-  }
-  
-  #Remove the id column from supplied count_data
-  if(any(grepl(colnames(count_data), pattern = 'Geneid',ignore.case = T)) == T){
-    counts_tpm = count_data[,-grep(colnames(count_data), pattern = 'Geneid', ignore.case = T)]
-  } else{
-    counts_tpm <- count_data}
-  
-  #Remove the id column from supplied lengths
-  if(any(grepl(colnames(lengths), pattern = 'id', ignore.case = T)) == T){
-    lengths.table = lengths[,-grep(colnames(lengths), pattern = 'id', ignore.case = T)]
-  }else{
-    lengths.table <- lengths}
-  lengths.table = matrix(lengths.table)
-  #This may make lengths.table a vector which can bring up some dimension problems in the following for loop
-  
-  #Now for the actual calculation
-  rpm <- counts_tpm
-  for (i in 1:dim(counts_tpm)[2]) {
-    for (j in 1:dim(counts_tpm)[1]) {
-      rpm[j,i] <- (counts_tpm[j,i]/(lengths.table[j]/1000))
-    }
-    scale.factor <- sum(rpm[,i])/(1E6)
-    counts_tpm[,i] <- apply(rpm[,i,drop=F],1,function(x){x/scale.factor})
-  }
-  if(any(grepl(colnames(count_data), pattern = 'Geneid', ignore.case = T)) == T){
-    counts_tpm = bind_cols(count_data[,grep(colnames(count_data), pattern = 'Geneid', ignore.case = T), drop = FALSE], 
-                           counts_tpm)
-  } 
-  return(counts_tpm)
-}
+#Global save var - set to TRUE if you want to save figures.
+global_save_var <- TRUE
 ```
 
 ```{r function_mround}
@@ -432,7 +378,23 @@ lapply(names(combined_data_pir_ht_list),
            at = labels_SorL,
            legend_gp = gpar(fill = SorL_col)
          )
-
+         
+         if(global_save_var){        
+           pdf('Manuscript_figure3c_heatmap.pdf'
+               , width = 10
+               , height = 4
+           )
+           draw(ht_list, 
+                row_title_side = 'left',
+                column_title_side = 'bottom',
+                heatmap_legend_side = 'right',
+                annotation_legend_side = 'right',
+                annotation_legend_list = list(clade_lgd),
+                ht_gap = unit(.35,'cm'),
+                merge_legend = TRUE)
+           dev.off()
+         }
+         
          return(
            draw(ht_list, 
                 row_title_side = 'left',
@@ -497,6 +459,15 @@ pc3_importance <- round(pca_importance$PC3[2]*100, digits = 1)
     theme(legend.key.size = unit(4, 'mm'),
           legend.text = element_text(size = 7))
 )
+
+if(global_save_var){
+  ggsave2(filename = 'Manuscript_SuppFigure3_chabaudi24h_pca_nopseudo.png',
+          plot = plot,
+          dpi = 300,
+          width = 15,
+          height = 10,
+          units = 'cm')
+}
 
 ```
 
@@ -569,7 +540,7 @@ twentyfour_z <- lapply(twentyfour_avgtpm,
 ###
 ```
 
-# Phaseograms of all the genes in both transmission methods - supplementary figure 5.
+# Phaseograms of all the genes.
 
 ```{r row_order_phaseograms}
 
@@ -921,9 +892,23 @@ draw_heatmap_zscore <- function(zscore_list,
 }
 ```
 
-## Phaseograms of the entire genome.
+## Supplementary figure 5 - Phaseograms of the entire genome.
 
 ```{r phaseograms_whole_genome}
+if(global_save_var){
+  png(filename = 'Manuscript_SuppFig5_phaseogram_allgenes.png',
+      units = 'cm',
+      height = 20,
+      width = 22,
+      res = 330)
+  draw_heatmap_zscore(zscore_list = twentyfour_z,
+                      gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
+                      use_times = TRUE,
+                      use_order_vector = FALSE,
+                      show_row_names = FALSE,
+                      tpm_mat = FALSE)
+  dev.off()
+}
 
 draw_heatmap_zscore(zscore_list = twentyfour_z,
                     gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
@@ -934,7 +919,7 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
 
 ```
 
-## Phaseograms of the _cir_ genes with clade annotations. - Supplementary figure 6
+##  Supplementary figure 6 - Phaseograms of the _cir_ genes with clade annotations
 
 ```{r pir_gene_phaseogram_breaks}
   max_tpm <- lapply(twentyfour_z, 
@@ -1009,6 +994,25 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
 
 ```{r phaseograms_cir}
 
+if(global_save_var){
+  png(filename = 'Manuscript_SuppFig6_phaseogram_cirgenes.png',
+      units = 'cm',
+      height = 20,
+      width = 22,
+      res = 200)
+  draw_heatmap_zscore(zscore_list = twentyfour_z,
+                      gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
+                      filter_genes_vector = cir_id,
+                      annotation_clade = 'SorL',
+                      annotation_col = SorL_col,
+                      threshold_tpm = 1,
+                      use_times = TRUE,
+                      use_order_vector = FALSE,
+                      show_row_names = FALSE,
+                      tpm_mat = FALSE)
+  dev.off()
+}
+
 draw_heatmap_zscore(zscore_list = twentyfour_z,
                     gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
                     filter_genes_vector = cir_id,
@@ -1022,7 +1026,7 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
 
 ```
 
-## Figure 4 and supplementary figure 7/8
+## Figure 4 and supplementary figure 7
 
 _pir_ genes selected by being expressed above 1 TPM in all samples.
 
@@ -1206,6 +1210,19 @@ transmissionSep_cir_plot <- function(time_vec = '14h',
              # print(num)
            }
            
+           if(global_save_var){
+             ggsave2(
+               paste0('Pchabaudi_side-by-side_barchart_facetbySubfam_',
+                      time_vec,
+                      '.png'),
+               plot = g,
+               dpi = 300,
+               width = 28,
+               height = 8,
+               units = 'cm'
+             )
+           }
+           
            grid.newpage()
            grid.draw(g)
   
@@ -1283,31 +1300,44 @@ cir_plot <- twentyfour_rMT %>%
         y = tpm
       )
     ) +
-    stat_summary(fun.y = median, 
-                 fun.ymin = median, 
-                 fun.ymax = median,
-                 geom = "bar", 
-                 width = 0.75, 
-                 size = 0.25, 
-                 position = 'dodge',
-                 fill = 'lightblue') +
-    geom_point(stat = 'identity', 
-               position = position_dodge(width = 0.75),
-               size = point_size) +
-    scale_y_continuous(breaks = breaks,
-                       limits = limits) +
+      stat_summary(fun.y = median, 
+                   fun.ymin = median, 
+                   fun.ymax = median,
+                   geom = "bar", 
+                   width = 0.75, 
+                   size = 0.25, 
+                   position = 'dodge',
+                   fill = 'lightblue') +
+      geom_point(stat = 'identity', 
+                 position = position_dodge(width = 0.75),
+                 size = point_size) +
+      scale_y_continuous(breaks = breaks,
+                         limits = limits) +
       scale_fill_manual(values = c('skyblue','red')) +
       ylab('log(TPM +1)') +
-    facet_grid(.~chapl_aapl, 
-             scales = "free_x",
-             space = "free_x") +
-    theme_classic() +
-    theme(
-      axis.text.x = element_text(angle = 90,
-                                 size = 5)
-    ) +
-    ggtitle(paste(unique(cir_plot$time)))
-
-  return(y)
-})
+      facet_grid(.~chapl_aapl, 
+                 scales = "free_x",
+                 space = "free_x") +
+      theme_classic() +
+      theme(
+        axis.text.x = element_text(angle = 90,
+                                   size = 5)
+      ) +
+      ggtitle(paste(unique(cir_plot$time)))
+    
+    if(global_save_var){
+      ggsave2(
+        paste0('Pchabaudi_sibe-by-side_chapl_aapl_',
+               time_vec,
+               '.png'),
+        plot = y,
+        dpi = 300,
+        width = 25,
+        height = 10,
+        units = 'cm'
+      )
+    }
+    
+    return(y)
+    })
 ```
