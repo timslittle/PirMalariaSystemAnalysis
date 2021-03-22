@@ -1035,24 +1035,23 @@ AMA1 PCHAS_0931000
 ```{r pirs_side-by-side_figure4_RMT-SBP-completelySeparate}
 
 housekeeping_genes <- data.frame('HSP70' = 'PCHAS_0721000',
-                             'MSP1' = 'PCHAS_0831300',
-                             'AMA1' = 'PCHAS_0931000')
+                                 'MSP1' = 'PCHAS_0831300',
+                                 'AMA1' = 'PCHAS_0931000')
 
 cir_housekeeping_id <- c(cir_id, 
                          'PCHAS_0721000',
                          'PCHAS_0831300',
                          'PCHAS_0931000')
 
-cir_plot <- twentyfour_ct_comb %>% 
+cir_plot <- twentyfour_rMT %>% 
   filter(Geneid %in% cir_housekeeping_id) %>%
   melt(id.vars = 'Geneid', 
        variable.name = 'sample', 
        value.name = 'tpm') %>% 
   mutate(
     stage = gsub(sample, pattern = '_[[:digit:]]$', replacement = ''),
-    transmission = str_split_fixed(sample, pattern = '_', n = 3)[,1],
-    diff_count = str_split_fixed(sample, pattern = '_', n = 4)[,3],
-    time = str_split_fixed(sample, pattern = '_', n = 3)[,2],
+    diff_count = str_split_fixed(sample, pattern = '_', n = 4)[,2],
+    time = str_split_fixed(sample, pattern = '_', n = 3)[,1],
     subfam = cir_clade_info$clade[match(Geneid, cir_clade_info$Geneid)]
   ) %>% 
   mutate(subfam = ifelse(is.na(subfam), 'ref', subfam)) %>% 
@@ -1060,19 +1059,8 @@ cir_plot <- twentyfour_ct_comb %>%
                        'Unknown'))) %>% 
   mutate(subfam = str_replace(subfam, 
                               'ancestral',
-                              'a')) %>% 
-  mutate(
-    subfam = interaction(
-      transmission,
-      forcats::fct_shift(
-        relevel(
-          as.factor(subfam),
-          ref = 'ref')
-      ),
-      sep = '_',
-      lex.order = TRUE
-    )
-  )
+                              'a')) 
+
 #Need to add the transmission name to the subfam so that they are ordered correctly.
 # Need to move 'ref' factor to the start of the subfam, then shift the factor levels to the 'left' (so now
 # ref is at the end) ensuring that the 'ref' genes are at the end of the graph for each transmission type.
@@ -1088,8 +1076,7 @@ limits_cir <- c(0,
                        base = 100))
 
 cir_plot_order <- cir_plot %>% 
-  filter(time == '14h',
-         transmission == 'RMT') %>% 
+  filter(time == '14h') %>% 
   arrange(desc(tpm))
 
 
@@ -1106,7 +1093,7 @@ transmissionSep_cir_plot <- function(time_vec = '14h',
                                      threshold_max = Inf){
   
   cir_plot_filter <- group_by(cir_plot, 
-                       Geneid) %>% 
+                              Geneid) %>% 
     filter(
       time == time_vec,
       !Geneid %in% cir_id | any(tpm >= threshold_min),
@@ -1135,56 +1122,51 @@ transmissionSep_cir_plot <- function(time_vec = '14h',
                         pattern = 'PCHAS_')
   )
   
-  lapply(unique(cir_plot_filter$transmission), 
-         function(transmission_method){
-           
-           cir_plot_filter <- filter(cir_plot_filter, 
-                              transmission %in% transmission_method)     
-           
-           y <- ggplot(
-             data = cir_plot_filter,
-             mapping = aes(
-               x = Geneid,
-               y = tpm
-             )
-           ) +
-             stat_summary(fun.y = median, 
-                          fun.ymin = median, 
-                          fun.ymax = median,
-                          geom = "bar",
-                          fill = 'lightblue',
-                          width = 0.75, 
-                          size = 0.25, 
-                          position = 'dodge') +
-             geom_point(stat = 'identity', 
-                        position = position_dodge(width = 0.75),
-                        size = point_size) +
-             scale_y_continuous(breaks = breaks,
-                                limits = limits) +
-             facet_grid(.~subfam, 
-                        scales = "free_x",
-                        space = "free_x",
-                        labeller = labeller(subfam = function(string) {
-                          str_remove_all(string, 
-                                         pattern = '(RMT|SBP)_')
-                        })) +
-             theme_classic() +
-             ylab('log(TPM + 1)')+
-             ggtitle(paste(unique(cir_plot_filter$time)))
-           
-           if(grepl(time_vec, pattern = '20|23')) {
-             y <- y + theme(
-               axis.text.x = element_text(size = text_size,
-                                          angle = 90,
-                                          vjust = 0.5)
-             )
-           } else {
-             y <- y + theme(
-               axis.text.x = element_blank(),
-               axis.ticks.x = element_blank()
-             ) 
-           }
-           
+  
+  y <- ggplot(
+    data = cir_plot_filter,
+    mapping = aes(
+      x = Geneid,
+      y = tpm
+    )
+  ) +
+    stat_summary(fun.y = median, 
+                 fun.ymin = median, 
+                 fun.ymax = median,
+                 geom = "bar",
+                 fill = 'lightblue',
+                 width = 0.75, 
+                 size = 0.25, 
+                 position = 'dodge') +
+    geom_point(stat = 'identity', 
+               position = position_dodge(width = 0.75),
+               size = point_size) +
+    scale_y_continuous(breaks = breaks,
+                       limits = limits) +
+    facet_grid(.~subfam, 
+               scales = "free_x",
+               space = "free_x",
+               labeller = labeller(subfam = function(string) {
+                 str_remove_all(string, 
+                                pattern = '(RMT|SBP)_')
+               })) +
+    theme_classic() +
+    ylab('log(TPM + 1)')+
+    ggtitle(paste(unique(cir_plot_filter$time)))
+  
+  if(grepl(time_vec, pattern = '20|23')) {
+    y <- y + theme(
+      axis.text.x = element_text(size = text_size,
+                                 angle = 90,
+                                 vjust = 0.5)
+    )
+  } else {
+    y <- y + theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank()
+    ) 
+  }
+  
            #This bit is to change the colour, and text colour, of the facet boxes
            
            g <- ggplot_gtable(ggplot_build(y))
@@ -1219,7 +1201,6 @@ transmissionSep_cir_plot <- function(time_vec = '14h',
            
            grid.newpage()
            grid.draw(g)
-         })
   
 }
 
