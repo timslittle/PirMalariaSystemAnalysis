@@ -1,0 +1,269 @@
+---
+title: "Manuscript_Github_Pchabaudi_calculateTPM"
+author: "Timothy Little"
+date: "22/03/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      results = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+
+knitr::opts_knit$set(root.dir = 
+                       "/Users/littlet/Dropbox (The Francis Crick)/Data/Manuscript_pirAnalysis_Github/Pchabaudi24h")
+#Note that the above doesn't give an error if the dir doesn't exist
+
+options(scipen = 999) # Means that numbers are displayed normally not as 1e6 (1000000)
+```
+
+```{r loading_packages, include = FALSE, message = FALSE}
+# Load the required packages
+
+library('readr')
+library('dplyr')
+library('tidyr')
+library('ggplot2')
+library('DESeq2')
+library("pheatmap")
+library("RColorBrewer")
+library('data.table')
+library('gridExtra')
+library('tibble')
+library('stringr')
+library('kableExtra')
+library('viridis')
+library('corrplot')
+library('reshape2')
+library('circlize') # for circular plots and colours
+library('cluster')    # clustering algorithms
+library('factoextra') # clustering algorithms & visualization
+library('ggfortify') # so ggplot understands prcomp objects
+library('ape') # for phylogeny plotting
+library('dendextend') # for dendrogram plotting
+library('readxl') # for reading in Excel spreadsheets
+library('plotly')
+library('scales')
+library('processx') # for downloading the plotly plots
+library('cowplot')
+library('ComplexHeatmap')
+library('ggbiplot')
+library('ggpattern')
+
+#Colour blind friendly palette
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+show_col(cbPalette)
+
+#Want the defaults for arrange, mutate and summarise to be from dplyr
+arrange <- dplyr::arrange
+mutate <- dplyr::mutate
+summarise <- dplyr::summarise
+select <- dplyr::select
+```
+
+```{r tpm, results = 'hide', message = FALSE}
+# # Calculating the transcript-per-million 
+# 
+# We need to write a function to calculate the TPM from the count data we have generated. This function uses the 'chabaudi_transcript_lengths' object created in the chunk above and should generate errors if it detects discrepencies between the Geneids so that the wrong transcript length is not used.
+
+tpm = function(count_data, lengths = chabaudi_transcript_lengths) {
+  
+  #Print an error if the id columns do not match
+  # first if statement to test that both have a GeneID column
+  if(any(grepl(colnames(lengths), 
+               pattern = 'id', 
+               ignore.case = T)) == T & any(grepl(colnames(count_data), 
+                                                  pattern = 'Geneid', 
+                                                  #This needs to be Geneid when some of the samples have 'id' in them
+                                                  ignore.case = T)) == T){
+    if(all(count_data[grep(colnames(count_data), 
+                           pattern = 'Geneid', ignore.case = T)] == lengths[grep(colnames(lengths), 
+                                                                             pattern = 'id', ignore.case = T)])) {
+      print('Count data and length gene ids both match')
+    } else {
+      stop('Error: Count data and length gene ids DO NOT MATCH, please make sure they are ordered identically.')
+    }
+  } else {
+    stop('Error: Count data and/or length table supplied do not have an id column.')
+  }
+  
+  #Remove the id column from supplied count_data
+  if(any(grepl(colnames(count_data), pattern = 'Geneid',ignore.case = T)) == T){
+    counts_tpm = count_data[,-grep(colnames(count_data), pattern = 'Geneid', ignore.case = T)]
+  } else{
+    counts_tpm <- count_data}
+  
+  #Remove the id column from supplied lengths
+  if(any(grepl(colnames(lengths), pattern = 'id', ignore.case = T)) == T){
+    lengths.table = lengths[,-grep(colnames(lengths), pattern = 'id', ignore.case = T)]
+  }else{
+    lengths.table <- lengths}
+  lengths.table = matrix(lengths.table)
+  #This may make lengths.table a vector which can bring up some dimension problems in the following for loop
+  
+  #Now for the actual calculation
+  rpm <- counts_tpm
+  for (i in 1:dim(counts_tpm)[2]) {
+    for (j in 1:dim(counts_tpm)[1]) {
+      rpm[j,i] <- (counts_tpm[j,i]/(lengths.table[j]/1000))
+    }
+    scale.factor <- sum(rpm[,i])/(1E6)
+    counts_tpm[,i] <- apply(rpm[,i,drop=F],1,function(x){x/scale.factor})
+  }
+  if(any(grepl(colnames(count_data), pattern = 'Geneid', ignore.case = T)) == T){
+    counts_tpm = bind_cols(count_data[,grep(colnames(count_data), pattern = 'Geneid', ignore.case = T), drop = FALSE], 
+                           counts_tpm)
+  } 
+  return(counts_tpm)
+}
+```
+
+```{r function_mround}
+mround <- function(x,base){ 
+  base*ceiling(x/base) 
+} 
+```
+
+```{r function_my_max}
+my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) #max robust to NAs
+```
+
+```{r function_ordering}
+ordering <- function(to_order, order_vector){
+  order = unlist(sapply(order_vector, 
+                        function(x){unique(str_subset(to_order, 
+                                                      pattern = paste(x)))}))
+  order_missing = unique(to_order[!to_order %in% order])
+  unique(c(order, order_missing), fromLast = TRUE)
+}
+
+order_vector <- c("Early.Rings",
+                  "Early.Mid.Rings",
+                  "Late.Mid.Rings",
+                  "Late.Rings",
+                  "Rings.Troph.conversion",
+                  "Early.Trophs",
+                  "Mid.Trophs",
+                  "Late.Trophs")
+```
+
+The _cir_ gene names were downloaded using a search of PlasmoDB _P. chabaudi_ genome. _cir_ genes are the names of _pir_ genes in _P chabaudi_.
+
+```{r cir_id, message=FALSE, results='hide'}
+
+# Getting the cir gene names and transcript lengths needed for calculating the transcript-per-million
+
+chabaudi_gene_info <- read.csv('../standard_files/PlasmoDB-47_beta_Pchabaudichabaudi_GenesByTaxon_Summary.csv',
+                              header = TRUE,
+                              stringsAsFactors = FALSE)
+
+chabaudi_transcript_lengths <- select(chabaudi_gene_info, c(Gene.ID, Transcript.Length)) %>% 
+  arrange(Gene.ID)
+
+
+chabaudi_gene_info <- dplyr::rename(chabaudi_gene_info, 
+                             Geneid = Gene.ID,
+                             Description = Product.Description)
+
+```
+
+```{r cir_info}
+
+cir_info <- read_delim('../standard_files/Pchabaudi_pir_info.txt',
+           delim = '\t')
+cir_id <- cir_info$Geneid
+
+cir_clade_info <- read_delim('../standard_files/Pchabaudi_pir_clades.txt',
+            delim = '\t')
+```
+
+```{r times_stages_labels}
+#Use the rMT stage differential count in order to name the samples, but keep time to retain order
+times_stages_table <- data.frame(time = c('02h', '05h', '08h', '11h', '14h', '17h','20h','23h'),
+                                 stage_diff_count = c('Late-Rings',
+                                                      'Rings-Troph-conversion',
+                                                      'Early-Trophs',
+                                                      'Mid-Trophs',
+                                                      'Late-Trophs',
+                                                      'Early-Rings',
+                                                      'Early-Mid-Rings',
+                                                      'Late-Mid-Rings'))
+# R will convert the dashes to '.' at some point so let's have this notation here also
+times_stages_table$r_stage_diff_count <- str_replace_all(times_stages_table$stage_diff_count, 
+                                                         pattern = '-', 
+                                                         replacement = '\\.')
+```
+
+```{r read_tpm_rescaled_data}
+
+chab_count_table <- read_xlsx('Manuscript_Frontiers_chabaudi_24h_counts.xlsx')
+
+twentyfour_ct_comb <- tpm(chab_count_table, 
+                          lengths = chabaudi_transcript_lengths)
+
+#Setting twentyfour_tpm_ct core dataset - remove pseudogene and re-scaled
+
+twentyfour_tpm_nopseudo <- twentyfour_ct_comb %>% 
+  filter(!Geneid %in% 'PCHAS_0420800')
+
+twentyfour_tpm_rescale_nopseudo <- lapply(colnames(twentyfour_tpm_nopseudo), 
+                                          function(column_name){
+                                            column <- getElement(twentyfour_tpm_nopseudo, 
+                                                                 paste(column_name))
+                                            if(is.numeric(column)){
+                                              #is.numeric to avoid trying to scale the Geneid column
+                                              tpm_scale_factor <- 1e6 / sum(column)
+                                              tpm_scaled <- as.numeric(column*tpm_scale_factor)
+                                            }else{
+                                              tpm_scaled <- column
+                                            }
+                                            return(tpm_scaled)
+                                          }) %>% 
+  bind_cols
+
+colnames(twentyfour_tpm_rescale_nopseudo) <- colnames(twentyfour_tpm_nopseudo)
+# apply(twentyfour_tpm_rescale_nopseudo[,-1], 2, sum)
+
+#Setting the re-scaled version as the default from now on
+#Setting twentyfour_tpm_ct core dataset - removed pseudogene and re-scaled
+twentyfour_ct_comb <- twentyfour_tpm_rescale_nopseudo
+
+twentyfour_rMT <- select(twentyfour_ct_comb, 
+                         matches('Geneid|rMT')) %>% 
+  rename_with(~ str_extract(.x,pattern = '(?<=rMT_).+'),
+              matches('rMT'))
+
+twentyfour_rMT_avg <- melt(twentyfour_rMT, 
+                           variable.name = 'sample',
+                           value.name = 'tpm') %>% 
+  mutate(stage = str_extract(sample, pattern = '.+(?=_[[:digit:]])')) %>% 
+  group_by(Geneid, stage) %>% 
+  summarise(mean_tpm = mean(tpm)) %>% 
+  dcast(Geneid ~ stage)
+
+# twentyfour_SBP <- select(twentyfour_ct_comb, 
+#                          matches('Geneid|SBP')) %>% 
+#   rename_with(~ str_extract(.x,pattern = '(?<=SBP_).+'),
+#               matches('SBP'))
+# 
+# twentyfour_SBP_avg <- melt(twentyfour_SBP, 
+#                            variable.name = 'sample',
+#                            value.name = 'tpm') %>% 
+#   mutate(stage = str_extract(sample, pattern = '.+(?=_[[:digit:]])')) %>% 
+#   group_by(Geneid, stage) %>% 
+#   summarise(mean_tpm = mean(tpm)) %>% 
+#   dcast(Geneid ~ stage)
+
+twentyfour_avgtpm <- list(
+  'rMT' = list(
+    tpm = twentyfour_rMT_avg,
+    experiment = 'rMT'
+  # ),
+  # 'SBP' = list(
+  #   tpm = twentyfour_SBP_avg,
+  #   experiment = 'SBP'
+  )
+)
+
+```
