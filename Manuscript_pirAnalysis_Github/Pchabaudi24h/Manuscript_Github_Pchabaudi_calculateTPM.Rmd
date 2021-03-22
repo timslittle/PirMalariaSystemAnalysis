@@ -266,4 +266,9 @@ twentyfour_avgtpm <- list(
   )
 )
 
+write_csv(twentyfour_rMT,
+          file = 'Pchabaudi_TPM_allBioReps.csv')
+write_csv(twentyfour_rMT_avg,
+          file = 'Pchabaudi_TPM_average.csv')
+
 ```
