@@ -1059,7 +1059,14 @@ cir_plot <- twentyfour_rMT %>%
                        'Unknown'))) %>% 
   mutate(subfam = str_replace(subfam, 
                               'ancestral',
-                              'a')) 
+                              'a')) %>% 
+  mutate(subfam =
+           forcats::fct_shift(
+             relevel(
+               as.factor(subfam),
+               ref = 'ref')
+           )
+  )
 
 #Need to add the transmission name to the subfam so that they are ordered correctly.
 # Need to move 'ref' factor to the start of the subfam, then shift the factor levels to the 'left' (so now
