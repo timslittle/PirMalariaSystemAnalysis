@@ -896,11 +896,9 @@ draw_heatmap_zscore <- function(zscore_list,
 
 ```{r phaseograms_whole_genome}
 if(global_save_var){
-  png(filename = 'Manuscript_SuppFig5_phaseogram_allgenes.png',
-      units = 'cm',
-      height = 20,
-      width = 22,
-      res = 330)
+  pdf(file = 'Manuscript_SuppFig5_phaseogram_allgenes.pdf',
+      height = 5,
+      width = 5)
   draw_heatmap_zscore(zscore_list = twentyfour_z,
                       gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
                       use_times = TRUE,
@@ -995,11 +993,9 @@ draw_heatmap_zscore(zscore_list = twentyfour_z,
 ```{r phaseograms_cir}
 
 if(global_save_var){
-  png(filename = 'Manuscript_SuppFig6_phaseogram_cirgenes.png',
-      units = 'cm',
-      height = 20,
-      width = 22,
-      res = 200)
+ pdf(file = 'Manuscript_SuppFig6_phaseogram_cirgenes.pdf',
+      height = 5,
+      width = 5)
   draw_heatmap_zscore(zscore_list = twentyfour_z,
                       gene_ordering_vector = phaseogram_time_order$RMT$zscore_order$Geneid,
                       filter_genes_vector = cir_id,

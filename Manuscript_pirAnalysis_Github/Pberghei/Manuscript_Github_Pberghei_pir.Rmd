@@ -583,6 +583,15 @@ big_top_recast <- column_to_rownames(big_top_recast, var = 'Geneid')
 
 # apply(big_top_recast, 2, sum)
 
+pdf(file = 'Manuscript_suppfig1A_corrplot_all_experiments_rnaseq.pdf',
+    height = 5,
+    width = 5)
+corrplot(cor(big_top_recast), method = 'color', 
+         order = 'hclust', hclust.method = 'ward.D2',
+         cl.lim = c(-0.036,1), tl.cex = 0.50,
+         col = c(viridis(100), magma(115)), addrect = 6)
+dev.off()
+
 corrplot(cor(big_top_recast), method = 'color', 
          order = 'hclust', hclust.method = 'ward.D2',
          cl.lim = c(-0.036,1), tl.cex = 0.50,
