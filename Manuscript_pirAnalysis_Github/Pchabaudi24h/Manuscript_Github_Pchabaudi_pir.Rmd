@@ -207,7 +207,7 @@ names(clade_col_num) <- sapply(names(clade_col),
 
 ## Figure 3c - Highest expressed all _pir_ heatmap
 
-```{r highest_expressed_stage_heatmap_fig3b}
+```{r highest_expressed_stage_heatmap_fig3c}
 
 num_SorL <- cir_info %>% 
   group_by(SorL) %>% 
