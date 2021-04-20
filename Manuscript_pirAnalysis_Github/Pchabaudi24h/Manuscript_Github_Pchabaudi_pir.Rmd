@@ -1032,7 +1032,7 @@ MSP1 PCHAS_0831300
 AMA1 PCHAS_0931000
 
 
-```{r pirs_side-by-side_figure4_RMT-SBP-completelySeparate}
+```{r pirs_side-by-side_figure4}
 
 housekeeping_genes <- data.frame('HSP70' = 'PCHAS_0721000',
                                  'MSP1' = 'PCHAS_0831300',

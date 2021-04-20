@@ -1,0 +1,421 @@
+---
+title: "Manuscript_Github_Pchabaudi_pir_TPMHeatmaps"
+author: "Timothy Little"
+date: "20/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      results = TRUE, 
+                      message = FALSE, 
+                      warning = FALSE)
+
+knitr::opts_knit$set(root.dir = 
+                       ".")
+#Note that the above doesn't give an error if the dir doesn't exist
+
+options(scipen = 999) # Means that numbers are displayed normally not as 1e6 (1000000)
+```
+
+```{r loading_packages, include = FALSE, message = FALSE}
+# Load the required packages
+
+library('readr')
+library('dplyr')
+library('tidyr')
+library('ggplot2')
+library('DESeq2')
+library("pheatmap")
+library("RColorBrewer")
+library('data.table')
+library('gridExtra')
+library('tibble')
+library('stringr')
+library('kableExtra')
+library('viridis')
+library('corrplot')
+library('reshape2')
+library('circlize') # for circular plots and colours
+library('cluster')    # clustering algorithms
+library('factoextra') # clustering algorithms & visualization
+library('ggfortify') # so ggplot understands prcomp objects
+library('ape') # for phylogeny plotting
+library('dendextend') # for dendrogram plotting
+library('readxl') # for reading in Excel spreadsheets
+library('plotly')
+library('scales')
+library('processx') # for downloading the plotly plots
+library('cowplot')
+library('ComplexHeatmap')
+library('ggbiplot')
+library('ggpattern')
+
+#Colour blind friendly palette
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+show_col(cbPalette)
+
+#Want the defaults for arrange, mutate and summarise to be from dplyr
+arrange <- dplyr::arrange
+mutate <- dplyr::mutate
+summarise <- dplyr::summarise
+select <- dplyr::select
+
+#Global save var - set to TRUE if you want to save figures.
+global_save_var <- TRUE
+```
+
+```{r function_mround}
+mround <- function(x,base){ 
+  base*ceiling(x/base) 
+} 
+```
+
+```{r function_my_max}
+my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) #max robust to NAs
+```
+
+```{r function_ordering}
+ordering <- function(to_order, order_vector){
+  order = unlist(sapply(order_vector, 
+                        function(x){unique(str_subset(to_order, 
+                                                      pattern = paste(x)))}))
+  order_missing = unique(to_order[!to_order %in% order])
+  unique(c(order, order_missing), fromLast = TRUE)
+}
+
+order_vector <- c("Early.Rings",
+                  "Early.Mid.Rings",
+                  "Late.Mid.Rings",
+                  "Late.Rings",
+                  "Rings.Troph.conversion",
+                  "Early.Trophs",
+                  "Mid.Trophs",
+                  "Late.Trophs")
+```
+
+The _cir_ gene names were downloaded using a search of PlasmoDB _P. chabaudi_ genome. _cir_ genes are the names of _pir_ genes in _P chabaudi_.
+
+```{r cir_id, message=FALSE, results='hide'}
+
+# Getting the cir gene names and transcript lengths needed for calculating the transcript-per-million
+
+chabaudi_gene_info <- read.csv('../standard_files/PlasmoDB-47_beta_Pchabaudichabaudi_GenesByTaxon_Summary.csv',
+                              header = TRUE,
+                              stringsAsFactors = FALSE)
+
+chabaudi_transcript_lengths <- select(chabaudi_gene_info, c(Gene.ID, Transcript.Length)) %>% 
+  arrange(Gene.ID)
+
+
+chabaudi_gene_info <- dplyr::rename(chabaudi_gene_info, 
+                             Geneid = Gene.ID,
+                             Description = Product.Description)
+
+```
+
+```{r cir_info}
+
+cir_info <- read_delim('../standard_files/Pchabaudi_pir_info.txt',
+           delim = '\t')
+cir_id <- cir_info$Geneid
+
+cir_clade_info <- read_delim('../standard_files/Pchabaudi_pir_clades.txt',
+            delim = '\t')
+```
+
+```{r times_stages_labels}
+#Use the RMT stage differential count in order to name the samples, but keep time to retain order
+times_stages_table <- data.frame(time = c('02h', '05h', '08h', '11h', '14h', '17h','20h','23h'),
+                                 stage_diff_count = c('Late-Rings',
+                                                      'Rings-Troph-conversion',
+                                                      'Early-Trophs',
+                                                      'Mid-Trophs',
+                                                      'Late-Trophs',
+                                                      'Early-Rings',
+                                                      'Early-Mid-Rings',
+                                                      'Late-Mid-Rings'))
+# R will convert the dashes to '.' at some point so let's have this notation here also
+times_stages_table$r_stage_diff_count <- str_replace_all(times_stages_table$stage_diff_count, 
+                                                         pattern = '-', 
+                                                         replacement = '\\.')
+```
+
+```{r read_TPM}
+#Need to use the calculateTPM script first.
+
+twentyfour_rMT <- read_csv('Pchabaudi_TPM_allBioReps.csv')
+
+twentyfour_avgtpm <- list(
+  'RMT' = list(
+    tpm = read_csv('Pchabaudi_TPM_average.csv'),
+    experiment = 'RMT'
+  )
+)
+
+```
+
+```{r colours_clades_phase}
+SorL_col <- setNames(
+  c(    '#F0E442',
+        '#56B4E9', #L
+        '#E69F00', #S
+        '#999999'),
+  sort(
+    unique(cir_info$SorL)
+  )
+)
+
+SorL_col_num <- SorL_col
+names(SorL_col_num) <- sapply(names(SorL_col), 
+                              function(clade_name) {
+                                paste0(
+                                  clade_name, 
+                                  ' (n = ',
+                                  sum(cir_info$SorL == clade_name),
+                                  ')'
+                                )
+                              })
+
+clade_col <- setNames(
+  c('#F0E442',
+    '#56B4E9', #L1
+    '#009E73',
+    '#0072B2',
+    '#E69F00', #S1
+    '#D55E00',
+    '#CC79A7',
+    '#999999'),
+  sort(
+    unique(cir_info$subfam)
+  )
+)
+
+clade_col_num <- clade_col
+names(clade_col_num) <- sapply(names(clade_col), 
+                               function(clade_name) {
+                                 paste0(
+                                   clade_name, 
+                                   ' (n = ',
+                                   sum(cir_info$subfam == clade_name),
+                                   ')'
+                                 )
+                               })
+
+
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Figure 4 and supplementary figure 7
+
+_pir_ genes selected by being expressed above 1 TPM in all samples.
+
+Adding in housekeeping genes for comparison:
+HSP70 putative  PCHAS_0721000
+MSP1 PCHAS_0831300
+AMA1 PCHAS_0931000
+
+
+```{r pirs_side-by-side_figure4}
+
+housekeeping_genes <- data.frame('HSP70' = 'PCHAS_0721000',
+                                 'MSP1' = 'PCHAS_0831300',
+                                 'AMA1' = 'PCHAS_0931000')
+
+cir_housekeeping_id <- c(cir_id, 
+                         'PCHAS_0721000',
+                         'PCHAS_0831300',
+                         'PCHAS_0931000')
+
+cir_plot <- twentyfour_rMT %>% 
+  filter(Geneid %in% cir_housekeeping_id) %>%
+  melt(id.vars = 'Geneid', 
+       variable.name = 'sample', 
+       value.name = 'tpm') %>% 
+  mutate(
+    stage = gsub(sample, pattern = '_[[:digit:]]$', replacement = ''),
+    diff_count = str_split_fixed(sample, pattern = '_', n = 4)[,2],
+    time = str_split_fixed(sample, pattern = '_', n = 3)[,1],
+    subfam = cir_clade_info$clade[match(Geneid, cir_clade_info$Geneid)]
+  ) %>% 
+  mutate(subfam = ifelse(is.na(subfam), 'ref', subfam)) %>% 
+  filter(!(time %in% c('sch.culture', 
+                       'Unknown'))) %>% 
+  mutate(subfam = str_replace(subfam, 
+                              'ancestral',
+                              'a')) %>% 
+  mutate(subfam =
+           forcats::fct_shift(
+             relevel(
+               as.factor(subfam),
+               ref = 'ref')
+           )
+  )
+
+#Need to add the transmission name to the subfam so that they are ordered correctly.
+# Need to move 'ref' factor to the start of the subfam, then shift the factor levels to the 'left' (so now
+# ref is at the end) ensuring that the 'ref' genes are at the end of the graph for each transmission type.
+
+cir_plot$Geneid <- ifelse(
+  cir_plot$Geneid %in% housekeeping_genes[1,],
+  colnames(housekeeping_genes)[ match(cir_plot$Geneid, housekeeping_genes[1,]) ],
+  cir_plot$Geneid
+)
+
+limits_cir <- c(0, 
+                mround(max(cir_plot$tpm), 
+                       base = 100))
+
+cir_plot_order <- cir_plot %>% 
+  filter(time == '14h') %>% 
+  arrange(desc(tpm))
+
+
+cir_plot <- mutate(cir_plot, 
+                   Geneid = factor(Geneid, 
+                                   levels = unique(cir_plot_order$Geneid)))
+
+transmissionSep_cir_plot <- function(time_vec = '14h',
+                                     log_it = TRUE,
+                                     limits = limits_cir,
+                                     point_size = 1,
+                                     text_size = 10,
+                                     threshold_min = 100,
+                                     threshold_max = Inf){
+  
+  cir_plot_filter <- group_by(cir_plot, 
+                              Geneid) %>% 
+    filter(
+      time == time_vec,
+      !Geneid %in% cir_id | any(tpm >= threshold_min),
+      !Geneid %in% cir_id | all(tpm <= threshold_max)
+    )
+  #Filter for pirs expressed above or below the thresholds, have the OR so that the ref genes aren't removed.
+  # e.g. Either 'Not a cir' OR 'Any TPM is above the minimum'.
+  
+  # cir_plot_filter %>% group_by(Geneid) %>% summarise(n())
+  if(log_it){
+    cir_plot_filter$tpm <- log2(1+cir_plot_filter$tpm)
+    limits = log2(1+limits)
+    breaks <- round(seq.int(0, 
+                            max(limits), 
+                            length.out = round(max(limits)) + 1, 
+                            digits = 0), 
+                    digits = 0)
+  }else{
+    breaks <- seq.int(0, max(limits), length.out = 11)
+  }
+  
+  cir_plot_filter$Geneid <- factor(
+    str_remove(cir_plot_filter$Geneid, 
+               pattern = 'PCHAS_'),
+    levels = str_remove(levels(cir_plot_filter$Geneid), 
+                        pattern = 'PCHAS_')
+  )
+  
+  
+  y <- ggplot(
+    data = cir_plot_filter,
+    mapping = aes(
+      x = Geneid,
+      y = tpm
+    )
+  ) +
+    stat_summary(fun.y = median, 
+                 fun.ymin = median, 
+                 fun.ymax = median,
+                 geom = "bar",
+                 fill = 'lightblue',
+                 width = 0.75, 
+                 size = 0.25, 
+                 position = 'dodge') +
+    geom_point(stat = 'identity', 
+               position = position_dodge(width = 0.75),
+               size = point_size) +
+    scale_y_continuous(breaks = breaks,
+                       limits = limits) +
+    facet_grid(.~subfam, 
+               scales = "free_x",
+               space = "free_x",
+               labeller = labeller(subfam = function(string) {
+                 str_remove_all(string, 
+                                pattern = '(RMT|SBP)_')
+               })) +
+    theme_classic() +
+    ylab('log(TPM + 1)')+
+    ggtitle(paste(unique(cir_plot_filter$time)))
+  
+  if(grepl(time_vec, pattern = '20|23')) {
+    y <- y + theme(
+      axis.text.x = element_text(size = text_size,
+                                 angle = 90,
+                                 vjust = 0.5)
+    )
+  } else {
+    y <- y + theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank()
+    ) 
+  }
+  
+           #This bit is to change the colour, and text colour, of the facet boxes
+           
+           g <- ggplot_gtable(ggplot_build(y))
+           
+           # g$widths[5] = 2*g$widths[5]
+           
+           strip_t <- which(grepl('strip-t', g$layout$name))
+           subfam_vec <- sort(unique(cir_plot_filter$subfam)) %>% str_remove_all(pattern = '(RMT|SBP)_')
+           fills <- case_when(str_detect(subfam_vec, 
+                                         pattern = 'a') ~ clade_col['ancestral'],
+                              subfam_vec %in% names(clade_col) ~ clade_col[paste(subfam_vec)],
+                              str_detect(subfam_vec, 
+                                         pattern = 'ref') ~ 'white')
+           k <- 1
+           for (i in strip_t) {
+             j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+             g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+             k <- k+1
+           }
+           
+           #subfam_vec also corresponds to which panel the different clades are, so for the small ones we can use this to
+           # manually make them a bit wider.
+           
+           short_panels <- which(str_detect(subfam_vec, pattern = 'a|S1'))
+           
+           for(i in short_panels){
+             num <- g$layout$l[grep(paste0('panel-1-', i, '$'), g$layout$name)]
+             g$widths[num] = 1.75*g$widths[num]
+             #1.75 times the width of the right panels.
+             # print(num)
+           }
+           
+           if(global_save_var){
+             ggsave2(
+               paste0('Pchabaudi_side-by-side_barchart_facetbySubfam_',
+                      time_vec,
+                      '.png'),
+               plot = g,
+               dpi = 300,
+               width = 28,
+               height = 8,
+               units = 'cm'
+             )
+           }
+           
+           grid.newpage()
+           grid.draw(g)
+  
+}
+
+lapply(
+  sort(unique(cir_plot$time)),
+  transmissionSep_cir_plot,
+  threshold_min = 50,
+  threshold_max = Inf,
+  point_size = 1,
+  text_size = 7.5
+)
+```
