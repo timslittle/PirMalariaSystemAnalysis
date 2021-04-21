@@ -442,7 +442,12 @@ combined_data_pir <- combined_data_pir[,c(ordering(colnames(combined_data_pir)[-
                                        drop = FALSE]
 
 combined_data_ordered <- tibble(Geneid = rownames(combined_data_pir),
-                                means = apply(combined_data_pir, 1, mean),
+                                means = apply(combined_data_pir[,
+                                                                str_detect(colnames(combined_data_pir), 
+                                                                           'chapl_aapl',
+                                                                           negate = TRUE)],
+                                              1,
+                                              mean),
                                 chapl_aapl_name = factor(
                                   combined_data_pir$chapl_aapl_name
                                 )) %>% 
@@ -484,7 +489,8 @@ maxcol <- ceiling(
 
 #Sub-family annotation
 chapl_aapl_name_info <- combined_data_pir_ht$chapl_aapl_name
-annotation_col <- c(chapl_aapl_name_col_num, 'ref' = 'black')
+annotation_col <- chapl_aapl_name_col_num[ordering(labels_chapl_aapl_name,
+                                                    order_vector = 'ChAPL')]
 
 #chapl_aapl_name annotation
 
@@ -526,10 +532,75 @@ ht <- Heatmap(
   height = unit(7,'cm'),
   row_title = NULL,
   left_annotation = chapl_aapl_name_ha,
-  row_split = 
+  row_split =
     factor(combined_data_pir_ht$chapl_aapl_name,
               levels = ordering(combined_data_pir_ht$chapl_aapl_name,
                                 order_vector = 'ChAPL')),
+  heatmap_legend_param = list(
+    labels_gp = gpar(fontsize = 10),
+    title_gp = gpar(fontsize = 10,
+                    fontface = 'bold'),
+    at = c(0,
+           maxcol/4,
+           maxcol/2,
+           3*maxcol/4,
+           maxcol)
+  ),
+  row_gap = unit(c(rep.int(1, times = 2),
+                   3,
+                   rep.int(1, times = 4)), "mm")
+)
+
+chapl_aapl_name_lgd <- Legend(
+  title = 'sub-family',
+  at = str_subset(
+    sort(
+      factor(labels_chapl_aapl_name,
+             ordering(labels_chapl_aapl_name,
+                      order_vector = 'ChAPL'))
+    ),
+    pattern = 'NA',
+    negate = TRUE
+  ),
+  legend_gp = gpar(fill = na.omit(annotation_col))
+)
+
+draw(ht, 
+     row_title_side = 'left',
+     column_title_side = 'bottom',
+     heatmap_legend_side = 'right',
+     annotation_legend_side = 'right',
+     annotation_legend_list = list(chapl_aapl_name_lgd),
+     merge_legend = TRUE)
+```
+
+```{r}
+ht <- Heatmap(
+  log2(1+combined_data_pir_ht[,!colnames(combined_data_pir_ht) %in% 'chapl_aapl_name']),
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  show_row_names = FALSE,
+  name = 'log(TPM+1)', 
+  col = colorRamp2(c(0,
+                     maxcol/4,
+                     maxcol/2,
+                     3*maxcol/4,
+                     maxcol),
+                   viridis(5)),
+  na_col = 'white', 
+  border = TRUE,
+  border_gp = gpar(lwd = 0.1),
+  column_names_gp = gpar(fontsize = 10),
+  row_dend_width = unit(3, "cm"),
+  width = unit(4.5, 'cm'),
+  height = unit(7,'cm'),
+  row_title = NULL,
+  left_annotation = chapl_aapl_name_ha,
+  # row_split = 
+  #   factor(combined_data_pir_ht$chapl_aapl_name,
+  #             levels = ordering(combined_data_pir_ht$chapl_aapl_name,
+  #                               order_vector = 'ChAPL')),
+  row_km = 9,
   heatmap_legend_param = list(
     labels_gp = gpar(fontsize = 10),
     title_gp = gpar(fontsize = 10,
@@ -544,10 +615,16 @@ ht <- Heatmap(
 
 chapl_aapl_name_lgd <- Legend(
   title = 'sub-family',
-  at = factor(labels_chapl_aapl_name,
-              ordering(labels_chapl_aapl_name,
-                order_vector = 'ChAPL')),
-  legend_gp = gpar(fill = annotation_col)
+  at = str_subset(
+    sort(
+      factor(labels_chapl_aapl_name,
+             ordering(labels_chapl_aapl_name,
+                      order_vector = 'ChAPL'))
+    ),
+    pattern = 'NA',
+    negate = TRUE
+  ),
+  legend_gp = gpar(fill = na.omit(annotation_col))
 )
 
 draw(ht, 
@@ -559,105 +636,3 @@ draw(ht,
      merge_legend = TRUE)
 ```
 
-
-```{r Supp_fig_AapL-ChaAPl_expression}
-
-cir_plot <- twentyfour_rMT %>% 
-  filter(Geneid %in% cir_id) %>%
-  melt(id.vars = 'Geneid', 
-       variable.name = 'sample', 
-       value.name = 'tpm') %>% 
-  mutate(
-    stage = gsub(sample, pattern = '_[[:digit:]]$', replacement = ''),
-    diff_count = str_split_fixed(sample, pattern = '_', n = 4)[,2],
-    time = str_split_fixed(sample, pattern = '_', n = 3)[,1],
-    subfam = cir_clade_info$clade[match(Geneid, cir_clade_info$Geneid)],
-    chapl_aapl = factor(cir_info$chapl_aapl_name[match(Geneid, 
-                                                       cir_info$Geneid)],
-                        levels = sort(unique(cir_info$chapl_aapl_name[match(Geneid, 
-                                                                            cir_info$Geneid)])))) %>% 
-  filter(!(time %in% c('sch', 
-                       'Unknown')),
-         !is.na(chapl_aapl) ) %>% 
-  group_by(Geneid) %>% 
-    arrange(desc(tpm)) 
-  
-  cir_plot_order <- cir_plot %>% 
-    filter(time == '14h') %>% 
-    arrange(desc(tpm))
-    
-  cir_plot <- mutate(cir_plot, 
-                     Geneid = factor(Geneid, 
-                                     levels = unique(cir_plot_order$Geneid)))
-  cir_plot_chapl_aapl_supp_info <- cir_plot
-  
-  max_aapl_chapl <- ceiling(max(log2(cir_plot$tpm+1)))
-  
-  breaks = seq(0, max_aapl_chapl, by = 1)
-    limits = c(0, max_aapl_chapl)
-    point_size = 0.25
-  
-  lapply(
-    sort(unique(cir_plot$time)),
-    function(time_vec){
-    
-    cir_plot <- filter(cir_plot, 
-                       time == time_vec)
- 
-      cir_plot$tpm <- log2(1+cir_plot$tpm)
-    
-    cir_plot$Geneid <- factor(
-      str_remove(cir_plot$Geneid, 
-                 pattern = 'PCHAS_'),
-      levels = str_remove(levels(cir_plot$Geneid), 
-                          pattern = 'PCHAS_')
-    )
-    
-    y <- ggplot(
-      data = cir_plot,
-      mapping = aes(
-        x = Geneid,
-        y = tpm
-      )
-    ) +
-      stat_summary(fun.y = median, 
-                   fun.ymin = median, 
-                   fun.ymax = median,
-                   geom = "bar", 
-                   width = 0.75, 
-                   size = 0.25, 
-                   position = 'dodge',
-                   fill = 'lightblue') +
-      geom_point(stat = 'identity', 
-                 position = position_dodge(width = 0.75),
-                 size = point_size) +
-      scale_y_continuous(breaks = breaks,
-                         limits = limits) +
-      scale_fill_manual(values = c('skyblue','red')) +
-      ylab('log(TPM +1)') +
-      facet_grid(.~chapl_aapl, 
-                 scales = "free_x",
-                 space = "free_x") +
-      theme_classic() +
-      theme(
-        axis.text.x = element_text(angle = 90,
-                                   size = 5)
-      ) +
-      ggtitle(paste(unique(cir_plot$time)))
-    
-    if(global_save_var){
-      ggsave2(
-        paste0('Pchabaudi_sibe-by-side_chapl_aapl_',
-               time_vec,
-               '.png'),
-        plot = y,
-        dpi = 300,
-        width = 25,
-        height = 10,
-        units = 'cm'
-      )
-    }
-    
-    return(y)
-    })
-```
