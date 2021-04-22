@@ -283,10 +283,6 @@ combined_data_pir <- twentyfour_avgtpm$RMT$tpm %>%
 
 #Ordering that a more understandable order
 
-combined_data_pir <- combined_data_pir[,c(ordering(colnames(combined_data_pir)[-1], 
-                                                   order_vector)),
-                                       drop = FALSE]
-
 combined_data_ordered <- tibble(Geneid = names(apply(combined_data_pir, 1, mean)),
                                 means = apply(combined_data_pir, 1, mean),
                                 subfam = factor(
@@ -326,7 +322,7 @@ combined_data_pir_ht <- combined_data_pir_ht[,order(colnames(combined_data_pir_h
 
 #Add a column for the subfam (ref for the reference genes)
 combined_data_pir_ht$subfam <- ifelse(rownames(combined_data_pir_ht) %in% cir_id,
-                                      cir_info$subfam[match(rownames(combined_data_pir_ht), 
+                                      cir_info$subfam_num[match(rownames(combined_data_pir_ht), 
                                                             cir_info$Geneid)],
                                       'ref')
 
@@ -368,10 +364,10 @@ labels_subfam <- c(setNames(paste0(num_subfam$subfam, ' (n = ', num_subfam$num, 
                             num_subfam$subfam),
                    'ref' = 'ref')
 
-anc_ha <- rowAnnotation(foo = anno_mark(at =  na.omit(match(clade_info, 'ancestral')) , 
-                                        labels = 'ancestral',
-                                        labels_gp = gpar(fontsize = 7),
-                                        link_width = unit(3, "mm")))
+# anc_ha <- rowAnnotation(foo = anno_mark(at =  na.omit(match(clade_info, 'ancestral')) , 
+#                                         labels = 'ancestral',
+#                                         labels_gp = gpar(fontsize = 7),
+#                                         link_width = unit(3, "mm")))
 
 
 ht <- Heatmap(
@@ -460,13 +456,6 @@ combined_data_pir <- twentyfour_avgtpm$RMT$tpm %>%
   filter_all(
       any_vars(. > 1)
   )
-
-
-#Ordering that a more understandable order
-
-combined_data_pir <- combined_data_pir[,c(ordering(colnames(combined_data_pir)[-1], 
-                                                   order_vector)),
-                                       drop = FALSE]
 
 combined_data_ordered <- tibble(Geneid = rownames(combined_data_pir),
                                 means = apply(combined_data_pir[,
@@ -560,7 +549,7 @@ ht <- Heatmap(
   height = unit(7,'cm'),
   # row_title = NULL,
   row_title_rot = 0,
-  row_title_gp = gpar(fontsize = 10),
+  row_title_gp = gpar(fontsize = 7),
   row_split = 
     factor(combined_data_pir_ht$chapl_aapl_name,
               levels = ordering(combined_data_pir_ht$chapl_aapl_name,
