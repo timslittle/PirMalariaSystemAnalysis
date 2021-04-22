@@ -123,16 +123,27 @@ cir_id <- cir_info$Geneid
 cir_clade_info <- read_delim('../standard_files/Pchabaudi_pir_clades.txt',
             delim = '\t')
 
-#Add chapl_aapl numbers for easier heatmap drawing later.
+#Add chapl_aapl/subfam numbers for easier heatmap drawing later.
 cir_info <- cir_info %>% 
   group_by(chapl_aapl_name) %>% 
   mutate(chapl_aapl_name_num = n_distinct(Geneid)) %>% 
-  mutate(chapl_aapl_name_num = paste0(
-                       chapl_aapl_name, 
-                       ' (n = ',
-                       chapl_aapl_name_num,
-                       ')'
-                     ))
+  mutate(
+    chapl_aapl_name_num = paste0(
+      chapl_aapl_name, 
+      ' (n = ',
+      chapl_aapl_name_num,
+      ')'
+    )) %>% 
+  group_by(subfam) %>% 
+  mutate(subfam_num = n_distinct(Geneid)) %>% 
+  mutate(
+    subfam_num = paste0(
+      subfam, 
+      ' (n = ',
+      subfam_num,
+      ')'
+    )
+  )
 ```
 
 ```{r times_stages_labels}
@@ -266,7 +277,7 @@ combined_data_pir <- twentyfour_avgtpm$RMT$tpm %>%
   filter(Geneid %in% cir_housekeeping_id) %>% 
   column_to_rownames(var = 'Geneid') %>% 
   filter_all(
-      any_vars(. > 1)
+      any_vars(. > 10)
   )
 
 
@@ -382,9 +393,11 @@ ht <- Heatmap(
   row_dend_width = unit(3, "cm"),
   width = unit(4.5, 'cm'),
   height = unit(7,'cm'),
-  row_title = NULL,
-  left_annotation = clade_ha,
-  right_annotation = anc_ha,
+  # row_title = NULL,
+  # left_annotation = clade_ha,
+  # right_annotation = anc_ha,
+  row_title_rot = 0,
+  row_title_gp = gpar(fontsize = 10),
   row_split = forcats::fct_shift(
     relevel(
       as.factor(combined_data_pir_ht$subfam),
@@ -411,10 +424,24 @@ clade_lgd <- Legend(
 draw(ht, 
      row_title_side = 'left',
      column_title_side = 'bottom',
-     heatmap_legend_side = 'right',
-     annotation_legend_side = 'right',
-     annotation_legend_list = list(clade_lgd),
+     # heatmap_legend_side = 'right',
+     # annotation_legend_side = 'right',
+     # annotation_legend_list = list(clade_lgd),
      merge_legend = TRUE)
+
+if(global_save_var){
+  pdf(file = 'Manuscript_Fig_subfam_heatmap.pdf',
+      height = 5,
+      width = 5)
+draw(ht, 
+     row_title_side = 'left',
+     column_title_side = 'bottom',
+     heatmap_legend_side = 'right',
+     # annotation_legend_side = 'right',
+     # annotation_legend_list = list(clade_lgd),
+     merge_legend = TRUE)
+  dev.off()
+}
 ```
 
 # Supp figure 9 - Pir expression of AAPLs and ChAPLs.
@@ -494,13 +521,14 @@ annotation_col <- chapl_aapl_name_col_num[ordering(labels_chapl_aapl_name,
 
 #chapl_aapl_name annotation
 
-chapl_aapl_name_ha <- rowAnnotation(
-  'sub-family' = anno_simple(
-    chapl_aapl_name_info,
-    col = annotation_col,
-  ),
-  annotation_name_gp = gpar(fontsize = 10)
-)
+# chapl_aapl_name_ha <- rowAnnotation(
+#   'CHAPL/AAPL' = anno_simple(
+#     chapl_aapl_name_info,
+#     col = annotation_col,
+#   ),
+#   annotation_name_gp = gpar(fontsize = 10)
+# )
+
 
 #chapl_aapl_name name labels
 num_chapl_aapl_name <- cir_info %>% 
@@ -530,9 +558,10 @@ ht <- Heatmap(
   row_dend_width = unit(3, "cm"),
   width = unit(4.5, 'cm'),
   height = unit(7,'cm'),
-  row_title = NULL,
-  left_annotation = chapl_aapl_name_ha,
-  row_split =
+  # row_title = NULL,
+  row_title_rot = 0,
+  row_title_gp = gpar(fontsize = 10),
+  row_split = 
     factor(combined_data_pir_ht$chapl_aapl_name,
               levels = ordering(combined_data_pir_ht$chapl_aapl_name,
                                 order_vector = 'ChAPL')),
@@ -551,8 +580,47 @@ ht <- Heatmap(
                    rep.int(1, times = 4)), "mm")
 )
 
+# chapl_aapl_name_lgd <- Legend(
+#   title = 'CHAPL/AAPL',
+#   at = str_subset(
+#     sort(
+#       factor(labels_chapl_aapl_name,
+#              ordering(labels_chapl_aapl_name,
+#                       order_vector = 'ChAPL'))
+#     ),
+#     pattern = 'NA',
+#     negate = TRUE
+#   ),
+#   legend_gp = gpar(fill = na.omit(annotation_col))
+# )
+
+if(global_save_var){
+  pdf(file = 'Manuscript_SuppFig_ChAPL-AAPL_heatmap.pdf',
+      height = 5,
+      width = 5)
+  draw(ht, 
+       row_title_side = 'left',
+       column_title_side = 'bottom',
+       # heatmap_legend_side = 'right',
+       # annotation_legend_side = 'right',
+       # annotation_legend_list = list(chapl_aapl_name_lgd),
+       # merge_legend = TRUE
+  )
+  dev.off()
+}
+```
+
+```{r}
+chapl_aapl_name_ha <- rowAnnotation(
+  'CHAPL/AAPL' = anno_simple(
+    chapl_aapl_name_info,
+    col = annotation_col,
+  ),
+  annotation_name_gp = gpar(fontsize = 10)
+)
+
 chapl_aapl_name_lgd <- Legend(
-  title = 'sub-family',
+  title = 'CHAPL/AAPL',
   at = str_subset(
     sort(
       factor(labels_chapl_aapl_name,
@@ -565,16 +633,6 @@ chapl_aapl_name_lgd <- Legend(
   legend_gp = gpar(fill = na.omit(annotation_col))
 )
 
-draw(ht, 
-     row_title_side = 'left',
-     column_title_side = 'bottom',
-     heatmap_legend_side = 'right',
-     annotation_legend_side = 'right',
-     annotation_legend_list = list(chapl_aapl_name_lgd),
-     merge_legend = TRUE)
-```
-
-```{r}
 ht <- Heatmap(
   log2(1+combined_data_pir_ht[,!colnames(combined_data_pir_ht) %in% 'chapl_aapl_name']),
   cluster_rows = TRUE,
@@ -613,20 +671,6 @@ ht <- Heatmap(
   )
 )
 
-chapl_aapl_name_lgd <- Legend(
-  title = 'sub-family',
-  at = str_subset(
-    sort(
-      factor(labels_chapl_aapl_name,
-             ordering(labels_chapl_aapl_name,
-                      order_vector = 'ChAPL'))
-    ),
-    pattern = 'NA',
-    negate = TRUE
-  ),
-  legend_gp = gpar(fill = na.omit(annotation_col))
-)
-
 draw(ht, 
      row_title_side = 'left',
      column_title_side = 'bottom',
@@ -634,5 +678,19 @@ draw(ht,
      annotation_legend_side = 'right',
      annotation_legend_list = list(chapl_aapl_name_lgd),
      merge_legend = TRUE)
+
+if(global_save_var){
+  pdf(file = 'Interest_chapl-aapl_clustered_heatmap.pdf',
+      height = 5,
+      width = 5)
+draw(ht, 
+     row_title_side = 'left',
+     column_title_side = 'bottom',
+     heatmap_legend_side = 'right',
+     annotation_legend_side = 'right',
+     annotation_legend_list = list(chapl_aapl_name_lgd),
+     merge_legend = TRUE)
+  dev.off()
+}
 ```
 
