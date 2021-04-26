@@ -440,6 +440,111 @@ draw(ht,
 }
 ```
 
+Add chapl/aapl annotation to above
+
+```{r}
+
+chapl_aapl_name_vec <- ifelse(grepl(cir_info$chapl_aapl_name_num[match(rownames(combined_data_pir_ht), 
+                                                                                     cir_info$Geneid)], 
+                                                  pattern = 'NA'),
+                                            NA,
+                                            cir_info$chapl_aapl_name_num[match(rownames(combined_data_pir_ht), cir_info$Geneid)])
+
+#chapl_aapl_name annotation
+
+annotation_col <- chapl_aapl_name_col_num[ordering(chapl_aapl_name_vec,
+                                                   order_vector = 'ChAPL')]
+
+chapl_aapl_name_ha <- rowAnnotation(
+  'CHAPL/AAPL' = anno_simple(
+    chapl_aapl_name_vec,
+    col = annotation_col,
+    na_col = 'white'
+  ),
+  annotation_name_gp = gpar(fontsize = 10)
+)
+
+chapl_aapl_name_lgd <- Legend(
+  title = 'CHAPL/AAPL',
+  at = names(annotation_col)
+    # str_subset(
+    # sort(
+    #   factor(chapl_aapl_name_vec,
+    #          ordering(chapl_aapl_name_vec,
+    #                   order_vector = 'ChAPL'))
+    # )
+    # ,
+    # pattern = 'NA',
+    # negate = TRUE
+  # )
+,
+  legend_gp = gpar(fill = na.omit(annotation_col))
+)
+
+ht <- Heatmap(
+  log2(1+combined_data_pir_ht[,!colnames(combined_data_pir_ht) %in% 'subfam']),
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = FALSE,
+  name = 'log(TPM+1)', 
+  col = colorRamp2(c(0,
+                     maxcol/4,
+                     maxcol/2,
+                     3*maxcol/4,
+                     maxcol),
+                   viridis(5)),
+  na_col = 'white', 
+  border = TRUE,
+  border_gp = gpar(lwd = 0.1),
+  column_names_gp = gpar(fontsize = 10),
+  row_dend_width = unit(3, "cm"),
+  width = unit(4.5, 'cm'),
+  height = unit(7,'cm'),
+  # row_title = NULL,
+  left_annotation = chapl_aapl_name_ha,
+  row_title_rot = 0,
+  row_title_gp = gpar(fontsize = 10),
+  row_split = forcats::fct_shift(
+    relevel(
+      as.factor(combined_data_pir_ht$subfam),
+      ref = 'ref')
+  ),
+  heatmap_legend_param = list(
+    labels_gp = gpar(fontsize = 10),
+    title_gp = gpar(fontsize = 10,
+                    fontface = 'bold'),
+    at = c(0,
+           maxcol/4,
+           maxcol/2,
+           3*maxcol/4,
+           maxcol)
+  )
+)
+
+draw(ht, 
+     row_title_side = 'left',
+     column_title_side = 'bottom',
+     heatmap_legend_side = 'right',
+     annotation_legend_side = 'right',
+     annotation_legend_list = list(chapl_aapl_name_lgd),
+     merge_legend = TRUE)
+
+if(global_save_var){
+  pdf(file = 'Interest_SubfamSplit_ChAPL-AAPLAnnotate_heatmap.pdf',
+      height = 5,
+      width = 5)
+draw(ht, 
+     row_title_side = 'left',
+     column_title_side = 'bottom',
+     heatmap_legend_side = 'right',
+     annotation_legend_side = 'right',
+     annotation_legend_list = list(chapl_aapl_name_lgd),
+     merge_legend = TRUE)
+  dev.off()
+}
+                                            
+```
+
 # Supp figure 9 - Pir expression of AAPLs and ChAPLs.
 
 _pir_ genes selected by being expressed above 1 TPM in at least one sample.
