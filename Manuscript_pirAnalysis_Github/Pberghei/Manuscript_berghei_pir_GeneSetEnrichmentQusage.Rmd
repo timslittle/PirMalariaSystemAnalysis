@@ -41,6 +41,7 @@ library('qusage')
 library('ggplot2')
 library('stringr')
 library('RColorBrewer')
+library('writexl')
 ```
 
 Download the data, and remove heterogeneous life cycle stages like 'Gam' and 'BldMl'. Will keep Asex.Mixed since we want to be able to compare that to other stages, although for each Asex stage we should remove the individual stages (like Rings) when looking at mixed, and the Mixed stages when looking at the individual stages.
@@ -91,16 +92,6 @@ pir_info <- read_xlsx('Manuscript_Frontiers_SuppInfo_berghei.xlsx',
                       sheet = 1)
 
 pir_geneset <- list(pirs = pir_info$Geneid)
-
-chrom_list <- lapply(unique(pir_info$chrom), 
-                     function(chrom_nam) filter(pir_info, 
-                                                chrom == chrom_nam)$Geneid)
-
-names(chrom_list) <- paste0('chr', 
-                            unique(pir_info$chrom))
-
-#Remove groups with only three members or fewer.
-chrom_list <- chrom_list[unlist(lapply(chrom_list, function(x) length(x) > 3))]
 
 subfam_list <- lapply(unique(pir_info$clade), 
                      function(clade_nam) filter(pir_info, 
@@ -204,8 +195,7 @@ asexRing_asexMix.results$SorL$qstable
 maleGam_v_Asex.Mix.results <- lapply(
   list(pir_geneset,
     subfam_list, 
-    ShortLong_list, 
-    chrom_list), 
+    ShortLong_list), 
   function(gene_list){
     qs.results.subfam <- qusage(berg_tpm_log2plus1.mat,
                                 lifeCycle_labels,
@@ -221,21 +211,19 @@ maleGam_v_Asex.Mix.results <- lapply(
            mutate(contrast = qs.results.subfam$contrast))
   }
 )
-names(maleGam_v_Asex.Mix.results) <- c('all', 'subfam', 'SorL', 'chrom')
+names(maleGam_v_Asex.Mix.results) <- c('all', 'subfam', 'SorL')
 
 plotGeneSetDistributions(maleGam_v_Asex.Mix.results$SorL$results, path.index =  'S')
 plotGeneSetDistributions(maleGam_v_Asex.Mix.results$SorL$results, path.index = 'L')
 plotGeneSetDistributions(maleGam_v_Asex.Mix.results$subfam$results, path.index = 'S4')
 mutate(maleGam_v_Asex.Mix.results$subfam$qstable , adjust = p.adjust(p.Value, method = 'fdr'))
-plotGeneSetDistributions(maleGam_v_Asex.Mix.results$chrom$results, path.index = 'chr14')
 ```
 
 ```{r}
 maleGam_v_Liv.Meroz.results <- lapply(
   list(pir_geneset,
     subfam_list, 
-    ShortLong_list, 
-    chrom_list), 
+    ShortLong_list), 
   function(gene_list){
     qs.results.subfam <- qusage(berg_tpm_log2plus1.mat,
                                 lifeCycle_labels,
@@ -257,8 +245,7 @@ maleGam_v_Liv.Meroz.results <- lapply(
 Asex.Mix_v_Liv.Meroz.results <- lapply(
   list(pir_geneset,
     subfam_list, 
-    ShortLong_list, 
-    chrom_list), 
+    ShortLong_list), 
   function(gene_list){
     qs.results.subfam <- qusage(berg_tpm_log2plus1.mat,
                                 lifeCycle_labels,
@@ -274,7 +261,7 @@ Asex.Mix_v_Liv.Meroz.results <- lapply(
            mutate(contrast = qs.results.subfam$contrast))
   }
 )
-names(Asex.Mix_v_Liv.Meroz.results) <- c('all', 'subfam', 'SorL', 'chrom')
+names(Asex.Mix_v_Liv.Meroz.results) <- c('all', 'subfam', 'SorL')
 
 plotGeneSetDistributions(Asex.Mix_v_Liv.Meroz.results$SorL$results, 
                          path.index = 'L')
@@ -334,8 +321,21 @@ x <- ggplot(berghei_comparison_stats_df,
   )
 ```
 
-```{r}
-berghei_comparison_stats_df
+```{r save_xlsx}
+ bind_rows(
+  lapply(c(maleGam_v_Asex.Mix.results, 
+           maleGam_v_Liv.Meroz.results, 
+           Asex.Mix_v_Liv.Meroz.results,
+           maleVfemale, 
+           post48livvearlyliv, 
+           livmero_livpost48.results),
+         getElement,
+         'qstable')
+) %>% 
+  select(contrast, everything()) %>% 
+  mutate(FDR = p.adjust(p.Value, method = 'fdr')) %>% 
+  arrange(contrast, pathway.name) %>% 
+  write_xlsx(path = 'SupplementaryInformation_Stats_Qusage_berghei.xlsx')
 ```
 
 
