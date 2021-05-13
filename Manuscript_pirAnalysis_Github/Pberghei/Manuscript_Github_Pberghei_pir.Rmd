@@ -882,7 +882,7 @@ y <- ggplot(data = tpm_data_SorL_stackgenes,
               x = stage_num,
               y = total_tpm, 
               fill = SorL,
-              group = stage_num
+              # group = stage_num
             )) +
   geom_rect(
     aes(
@@ -897,16 +897,16 @@ y <- ggplot(data = tpm_data_SorL_stackgenes,
   geom_bar(position = position_stack(),
            stat = 'identity',
            colour = 'black',
-           size = 0.1) +
+           size = 0.1) + 
   scale_fill_manual(
     breaks = unique(tpm_data_SorL_stackgenes$SorL),
     values = c(
       SorL_col_num,
       fills
     )
-  )+
+  ) +
   scale_color_manual('black') + 
-  labs(fill = stack_label) +
+  # labs(fill = stack_label) +
   scale_y_continuous(breaks = max_tpm) +
   theme_classic() +
   # scale_size(range = c(0,3)) +
@@ -1008,15 +1008,18 @@ y <- ggplot(data = tpm_data_SorL_stackgenes_low,
               x = stage,
               y = total_tpm, 
               fill = SorL,
-              group = stack_group_order
+              # group = stage_num
             )) +
   geom_bar(position = position_stack(),
            stat = 'identity',
            colour = 'black',
-           size = 0.1) +
+           size = 0.1) + 
   scale_fill_manual(
-    breaks = unique(tpm_data_SorL_stackgenes_low$SorL),
-    values = SorL_col_num
+    breaks = unique(tpm_data_SorL_stackgenes$SorL),
+    values = c(
+      SorL_col_num,
+      fills
+    )
   ) +
   scale_color_manual('black') + 
   labs(fill = stack_label) +
@@ -1052,25 +1055,25 @@ y <- ggplot(data = tpm_data_SorL_stackgenes_low,
     panel.spacing.x = unit(0, "null")
   ) 
 
-  #This bit is to change the colour of the facet boxes
-  
-  g <- ggplot_gtable(ggplot_build(y))
-  strip_t <- which(grepl('strip-t', g$layout$name))
-  stage_vec <- unique(
+#This bit is to change the colour of the facet boxes
+
+g <- ggplot_gtable(ggplot_build(y))
+strip_t <- which(grepl('strip-t', g$layout$name))
+stage_vec <- unique(
   levels(tpm_data_SorL_stackgenes_low$stage)[levels(tpm_data_SorL_stackgenes_low$stage) %in% as.character(tpm_data_SorL_stackgenes_low$stage)]
-  )
-  fills <- case_when(str_detect(stage_vec, pattern = 'Asex') ~ 'coral1' ,
-                     str_detect(stage_vec, pattern = 'Liv') ~ 'plum2',
-                     str_detect(stage_vec, pattern = 'Gam') ~ 'lightskyblue1',
-                     str_detect(stage_vec, pattern  = 'Bld|Sporo|Ook') ~ 'lightgreen')
-  k <- 1
-  for (i in strip_t) {
-    j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
-    g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
-    k <- k+1
-  }
-  grid.newpage()
-  grid.draw(g)
+)
+fills <- case_when(str_detect(stage_vec, pattern = 'Asex') ~ 'coral1' ,
+                   str_detect(stage_vec, pattern = 'Liv') ~ 'plum2',
+                   str_detect(stage_vec, pattern = 'Gam') ~ 'lightskyblue1',
+                   str_detect(stage_vec, pattern  = 'Bld|Sporo|Ook') ~ 'lightgreen')
+k <- 1
+for (i in strip_t) {
+  j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+  g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+  k <- k+1
+}
+grid.newpage()
+grid.draw(g)
 ```
 
 ```{r table_of_SorL_highest_supptable}
