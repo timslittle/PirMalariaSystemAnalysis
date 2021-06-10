@@ -173,6 +173,6 @@ dds.maleGam.deseq.livMeroz_v_gamMale.lfcShr <- lfcShrink(dds.maleGam.deseq,
 
 ```{r save_stats_df}
 write_xlsx(deseq_stats, 
-           'SupplementaryInformation_Stats_DESEQ_berghei.xlsx')
+           'SupplementaryInformation4_Stats_DESEQ_berghei.xlsx')
 ```
 
