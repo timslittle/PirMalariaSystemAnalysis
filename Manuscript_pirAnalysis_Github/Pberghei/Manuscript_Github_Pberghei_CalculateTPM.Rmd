@@ -60,26 +60,7 @@ select <- dplyr::select
 source('../rfunctions/uniquify_fun.R')
 source('../rfunctions/ordering_fun.R')
 source('../rfunctions/tpm_fun.R')
-```
-
-```{r function_mround}
-#Make nicer numbers rounded up, useful for making scales for a plot.
-mround <- function(x,base){ 
-  base*ceiling(x/base) 
-} 
-```
-
-```{r function_my_max}
-#max robust to NAs
-my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) 
-```
-
-```{r function_firstup}
-#Capitalize first letter
-firstup <- function(x) {
-  substr(x, 1, 1) <- toupper(substr(x, 1, 1))
-  x
-}
+source('../rfunctions/usefulFunctions_mround_my-max_firstup_fun.R')
 ```
 
 ```{r ordering_vectors}
