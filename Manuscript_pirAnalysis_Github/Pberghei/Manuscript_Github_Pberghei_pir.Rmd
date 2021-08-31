@@ -60,26 +60,7 @@ select <- dplyr::select
 source('../rfunctions/uniquify_fun.R')
 source('../rfunctions/ordering_fun.R')
 source('../rfunctions/tpm_fun.R')
-```
-
-```{r function_mround}
-#Make nicer numbers rounded up, useful for making scales for a plot.
-mround <- function(x,base){ 
-  base*ceiling(x/base) 
-} 
-```
-
-```{r function_my_max}
-#max robust to NAs
-my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) 
-```
-
-```{r function_firstup}
-#Capitalize first letter
-firstup <- function(x) {
-  substr(x, 1, 1) <- toupper(substr(x, 1, 1))
-  x
-}
+source('../rfunctions/usefulFunctions_mround_my-max_firstup_fun.R')
 ```
 
 ```{r ordering_vectors}
@@ -208,111 +189,11 @@ pir_clade_list <- lapply(unique(pir_clade$clade), function(clade_name){
 names(pir_clade_list) <- as.character(unique(pir_clade$clade))
 ```
 
-```{r transcript_redundancy, message = FALSE, results='hide'}
-
-#Note that there is some redundancy
-two.transcript <- allgene.info %>% 
-  dplyr::count(Geneid) %>% 
-  filter(n > 1)
-
-#Nine genes have two transcripts - need to give them one average of the transcripts since featurecounts has only
-# calculated one count for the locus
-two.transcript.info <- allgene.info[allgene.info$Geneid %in% two.transcript$Geneid,]
-two.transcript.mean = aggregate(transcript_length~Geneid, data=two.transcript.info, 
-                                FUN=function(x) c(mean=mean(x)))
-
-#Remove the first match
-allgene.info <- allgene.info[-(match(two.transcript.mean$Geneid, 
-                                     allgene.info$Geneid)),]
-
-#For the second match replace the transcript value with the mean calculated with aggregate
-allgene.info$transcript_length <- as.double(allgene.info$transcript_length)
-allgene.info[match(two.transcript.mean$Geneid, 
-                   allgene.info$Geneid),]$transcript_length <- two.transcript.mean$transcript_length
-lengths.transcript <- subset(allgene.info, select = c(Geneid, transcript_length), drop = F)
-```
-
-## Read in counts and calculate TPM
-
-```{r read_files_calc_TPM}
-#Reading in the counts from file
-berghei_counts <- read.csv('tl20-05_berghei_counts.csv',
-                               row.names = 1)
-
-berghei_tpm <- tpm(berghei_counts,
-                   lengths = lengths.transcript)
-
-apply(berghei_tpm[-1], 2, sum)
-```
-
-```{r save_tpm_oldNames_allSamples}
-#Save the 'raw' TPM before any samples have been removed or sample names combined.
-
-write.csv(berghei_tpm,
-          'berghei_tpm_oldNamesAllSamples.csv')
-
-```
-
-```{r remove_E06-6h}
-#Remove the Caldelari (E06) 6h samples, as they did in their paper.
-berghei_tpm[,str_subset(colnames(berghei_tpm), 'E06_Liv.6h')] <- NULL
-```
-
-```{r hclusts, message = FALSE}
-experiment_id <- unique(na.omit(str_extract(colnames(berghei_tpm), pattern = 'E[[:digit:]]{2}')))
-
-lapply(experiment_id, 
-       function(experiment_name){
-         tpm_data <- select(berghei_tpm, matches(experiment_name))
-         if(ncol(tpm_data) > 3){
-           dists = dist(t(tpm_data))
-           par(cex=0.7)
-           plot(hclust(dists),
-                main = experiment_name)
-         }
-       })
-
-```
-
-Going to combine certain samples based on their similar profiles, e.g. <4h, >48h liver stages.
-
-```{r combine_similar_samples_byNames}
-col_stage <- colnames(berghei_tpm)
-
-#Combine all Liver samples 4h or before into LiverPre4h
-col_stage <- str_replace_all(col_stage,
-                             pattern = 'Liv\\.(2|4)h_[[:digit:]]+',
-                             replacement = 'Liv.pre4h')
-#Combine all Liver samples 48h or onwards into LiverPost48h
-col_stage <- str_replace_all(col_stage,
-                             pattern = 'Liv\\.(4[8-9]|[5-9][0-9])h_[[:digit:]]+',
-                             replacement = 'Liv.post48h')
-#Combine all blood meal samples 3h or before into BldMlPre3h
-col_stage <- str_replace_all(col_stage,
-                             pattern = '(1h|3h)_[[:digit:]]+', 
-                             replacement = 'Pre3h')
-#Uniquify the name names
-col_stage[grep(col_stage, 
-               perl = TRUE,
-               invert = TRUE,
-               pattern = '_[[:digit:]]{1,}$')] <- uniquify(col_stage[grep(col_stage, 
-                                                                          perl = TRUE,
-                                                                          invert = TRUE,
-                                                                          pattern = '_[[:digit:]]{1,}$')]) 
-```
-
-
-```{r remove_badly_clustering_samples}
-berghei_tpm$`E08_Liv.pre4h_1` <- NULL
-berghei_tpm$`E03_Asex.Schiz_1` <- NULL
-berghei_tpm$`E03_Asex.Schiz_3` <- NULL
-```
-
 ## Saving the TPM 
 
 ```{r save_tpm}
-write.csv(berghei_tpm,
-          'berghei_tpm.csv')
+berghei_tpm <- read.csv('berghei_tpm.csv', 
+                        row.names = 1)
 ```
 
 ```{r expt_tpms}
@@ -345,8 +226,8 @@ names(expt_tpms) <- expt_nams
 
 ```{r top_genes, echo = FALSE, message = FALSE, results = "asis"}
 top_n_genes <- function(tpm_input, 
-                       n = 5, 
-                       threshold = 0){
+                        n = 5, 
+                        threshold = 0){
   tpm = tpm_input$tpm %>% 
     #Melt the data frame for using dplyr
     melt(id.vars = 'Geneid', variable.name = 'sample', value.name = 'tpm') %>% 
@@ -413,7 +294,7 @@ top_n_genes <- function(tpm_input,
 all_top <- lapply(expt_tpms, 
                   top_n_genes)
 
-lapply(all_top, `[`, c('all_genes', 'pir_genes'))
+lapply(all_top[[1]], `[`, c('all_genes', 'pir_genes'))
 
 ```
 
