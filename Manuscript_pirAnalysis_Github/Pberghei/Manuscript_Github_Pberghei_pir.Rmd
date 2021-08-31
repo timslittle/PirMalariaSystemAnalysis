@@ -222,31 +222,35 @@ expt_tpms <- lapply(
 names(expt_tpms) <- expt_nams
 ```
 
+```{r melt_df}
+berghei_tpm_melt <- berghei_tpm %>% 
+    #Melt the data frame for using dplyr
+    melt(id.vars = 'Geneid', variable.name = 'sample', value.name = 'tpm') %>% 
+    mutate(experiment = unlist(lapply(strsplit(as.character(sample), split = '_'),`[`,1)),
+           stage = unlist(lapply(strsplit(as.character(sample), split = '_'),`[`,2)))
+
+berghei_tpm_avg_byexpt <- berghei_tpm_melt %>% 
+  group_by(Geneid, experiment, stage) %>%  
+  dplyr::summarise(median_tpm = median(tpm),
+                   mean_tpm = mean(tpm), 
+                   min_tpm = min(tpm), 
+                   max_tpm = max(tpm), 
+                   sd_tpm = sd(tpm)) 
+```
+
+
 ## The highest expressed _pir_ genes across the samples
 
 ```{r top_genes, echo = FALSE, message = FALSE, results = "asis"}
-top_n_genes <- function(tpm_input, 
+top_n_genes <- function(tpm_avg, 
                         n = 5, 
                         threshold = 0){
-  tpm = tpm_input$tpm %>% 
-    #Melt the data frame for using dplyr
-    melt(id.vars = 'Geneid', variable.name = 'sample', value.name = 'tpm') %>% 
-    mutate(stage = unlist(lapply(strsplit(as.character(sample), split = '_'),`[`,1))) %>% 
-    group_by(Geneid, stage) %>%  
-    dplyr::summarise(median_tpm = median(tpm),
-                     mean_tpm = mean(tpm), 
-                     min_tpm = min(tpm), 
-                     max_tpm = max(tpm), 
-                     sd_tpm = sd(tpm)) %>% 
-    group_by(stage) %>% 
-    mutate(experiment = tpm_input$experiment)
-  
   #Calculating the index used to make the kable table
   
-  kable_index = rep(n, times = length(unique(tpm$stage)))
-  names(kable_index) = unique(tpm$stage)
+  kable_index = rep(n, times = length(unique(tpm_avg$stage)))
+  names(kable_index) = unique(tpm_avg$stage)
   
-  all_genes = tpm %>% 
+  all_genes = tpm_avg %>% 
     top_n(wt = mean_tpm, n = n) %>% 
     dplyr::arrange(stage, desc(mean_tpm)) %>% 
     mutate_if(is.numeric, function(x){round(x, digits = 2)}) %>% 
@@ -258,12 +262,12 @@ top_n_genes <- function(tpm_input,
                                                          allgene.info$Geneid)]
   all_genes = all_genes %>% 
     kable(format = 'html', 
-          caption = paste0(paste0(paste0(tpm_input$experiment, ' - Top '), paste(n)), ' expressed total genes'), 
+          caption = paste0(tpm_avg$experiment[1], ' - Top ', n, ' expressed total genes'), 
           escape = FALSE) %>%
     kable_styling() %>% 
     pack_rows(index = kable_index)
   
-  pir_genes = tpm %>% 
+  pir_genes = tpm_avg %>% 
     filter(Geneid %in% pir_id) %>% 
     top_n(wt = mean_tpm, n = n) %>% 
     dplyr::arrange(stage, desc(mean_tpm)) %>% 
@@ -278,21 +282,21 @@ top_n_genes <- function(tpm_input,
                            cell_spec(Geneid, bold = TRUE),
                            Geneid)) %>%
     kable(format = 'html', 
-          caption = paste0(paste0(paste0(tpm_input$experiment, ' - Top '), paste(n)), ' expressed pir genes'), 
+          caption = paste0(tpm_avg$experiment[1], ' - Top ', n, ' expressed pir genes'), 
           escape = FALSE) %>% 
     pack_rows(index = kable_index) %>% 
     kable_styling()
   
   # print(paste0('Completed analysis of ', tpm_input$experiment))
-  list = list(tpm, all_genes, pir_genes, tpm_input$experiment)
-  names(list) = c('tpm', 'all_genes', 'pir_genes', 'experiment')
+  list = list(all_genes, pir_genes, tpm_input$experiment)
+  names(list) = c('all_genes', 'pir_genes', 'experiment')
   return(list)
 }
 
 ### Generate and save top genes - core dataset all_top
 
-all_top <- lapply(expt_tpms, 
-                  top_n_genes)
+all_top <- lapply(unique(berghei_tpm_avg_byexpt$experiment), 
+                  function(expt) top_n_genes(berghei_tpm_avg_byexpt[berghei_tpm_avg_byexpt$experiment == expt,]))
 
 lapply(all_top[[1]], `[`, c('all_genes', 'pir_genes'))
 
@@ -309,6 +313,7 @@ big_top = bind_rows(lapply(all_top,function(x){
   data$stage = paste(x$experiment, data$stage, sep = '_')
   data
 }))
+big_top <- berghei_tpm_melt
 
 big_top_recast = dcast(big_top, Geneid ~ stage, value.var = 'mean_tpm')
 big_top_recast <- column_to_rownames(big_top_recast, var = 'Geneid')
