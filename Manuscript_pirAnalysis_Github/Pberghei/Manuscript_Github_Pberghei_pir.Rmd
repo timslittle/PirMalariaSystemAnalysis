@@ -141,10 +141,10 @@ tpm = function(count_data,lengths) {
                                                                              pattern = 'id', ignore.case = T)])) {
       print('Count data and length gene ids both match')
     } else {
-      print('Warning:Count data and length gene ids DO NOT MATCH')
+      stop('Warning:Count data and length gene ids DO NOT MATCH')
     }
   } else {
-    print('Count data and/or length table supplied do not have an id column, make sure they are ordered correctly')
+    stop('Count data and/or length table supplied do not have an id column, make sure they are ordered correctly')
   }
   
   #Remove the id column from supplied count_data
@@ -350,7 +350,9 @@ expt_tpms <- lapply(
   }
 )
 names(expt_tpms) <- expt_nams
+```
 
+```{r remove_E06-6h}
 #Remove the Caldelari (E06) 6h samples, as they did in their paper.
 
 expt_tpms$E06$tpm <- select_at(expt_tpms$E06$tpm,
@@ -467,6 +469,12 @@ lapply(expt_tpms, hclusts)
 expt_tpms$E08$tpm$`Liv-pre4h_1` <- NULL
 expt_tpms$E03$tpm$`Asex-Schiz_1` <- NULL
 expt_tpms$E03$tpm$`Asex-Schiz_3` <- NULL
+```
+
+## Saving the TPM 
+
+```{r save_tpm}
+
 ```
 
 ## The highest expressed _pir_ genes across the samples
