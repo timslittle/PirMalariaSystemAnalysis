@@ -274,6 +274,8 @@ lapply(experiment_id,
 
 ```
 
+Going to combine certain samples based on their similar profiles, e.g. <4h, >48h liver stages.
+
 ```{r combine_similar_samples_byNames}
 col_stage <- colnames(berghei_tpm)
 
@@ -300,6 +302,19 @@ col_stage[grep(col_stage,
 ```
 
 
+```{r remove_badly_clustering_samples}
+berghei_tpm$`E08_Liv.pre4h_1` <- NULL
+berghei_tpm$`E03_Asex.Schiz_1` <- NULL
+berghei_tpm$`E03_Asex.Schiz_3` <- NULL
+```
+
+## Saving the TPM 
+
+```{r save_tpm}
+write.csv(berghei_tpm,
+          'berghei_tpm.csv')
+```
+
 ```{r expt_tpms}
 #Get a list of df for each experiment.
 
@@ -324,115 +339,6 @@ expt_tpms <- lapply(
   }
 )
 names(expt_tpms) <- expt_nams
-```
-
-Going to combine certain samples based on their distinctive profiles, e.g. <4h, 6-48h, >48h liver stages.
-
-```{r combining_samples}
-names_expt_tpms <- names(expt_tpms)
-
-expt_tpms <- lapply(names(expt_tpms), function(expt){
-  col_stage <- colnames(
-    getElement(
-      getElement(
-        expt_tpms, 
-        paste(expt)
-      ),
-      'tpm'
-    )
-  )
-  
-  liver_stage <- col_stage[
-    str_detect(
-      col_stage,
-      pattern = 'Liv-[[:digit:]]{1,2}h'
-    )
-    ]
-  
-  new_liver_stage <- case_when(
-    str_detect(liver_stage, pattern = 'Liv-(2|4)h') ~ 'Liv-pre4h',
-    # str_detect(liver_stage, pattern = 'Liv-([5-9]|[1-3][0-9]|4[0-7])h') ~ 'Liv-pre47h',
-    str_detect(liver_stage, pattern = 'Liv-(4[8-9]|[5-9][0-9])h') ~ 'Liv-post48h',
-    TRUE ~ as.character(liver_stage),
-  )
-  
-  if(length(new_liver_stage) > 0){
-    new_liver_stage <-uniquify(new_liver_stage)
-  }
-  
-  col_stage[
-    str_detect(
-      col_stage,
-      pattern = 'Liv-[[:digit:]]{1,2}h'
-    )
-    ] <- new_liver_stage
-  
-  bloodmeal_stage <- col_stage[
-    str_detect(
-      col_stage, 
-      pattern = 'BldMl-(1h|3h)_[[:digit:]]+'
-    )
-    ]
-  
-  bloodmeal_stage <- str_replace(
-    bloodmeal_stage, 
-    pattern = '(1h|3h)_[[:digit:]]+', 
-    replacement = 'Pre3h'
-  )
-  if(length(bloodmeal_stage)>0){
-    bloodmeal_stage <- uniquify(bloodmeal_stage)
-  }
-  
-  col_stage[
-    str_detect(
-      col_stage, 
-      pattern = 'BldMl-(1h|3h)_[[:digit:]]+'
-    )
-    ] <- bloodmeal_stage
-  
-  tpm_element <- getElement(
-    getElement(
-      expt_tpms, 
-      paste(expt)
-    ),
-    'tpm'
-  )
-  
-  colnames(tpm_element) <- col_stage
-  
-  list(tpm = tpm_element,
-       experiment =   getElement(
-         getElement(
-           expt_tpms,
-           paste(expt)
-         ),
-         'experiment'
-       )
-  )
-  
-})
-names(expt_tpms) <- names_expt_tpms
-
-#Re-ordering the list
-expt_tpms <- (expt_tpms[order(names(expt_tpms))])
-```
-
-```{r remove_badly_clustering_samples}
-expt_tpms$E08$tpm$`Liv-pre4h_1` <- NULL
-expt_tpms$E03$tpm$`Asex-Schiz_1` <- NULL
-expt_tpms$E03$tpm$`Asex-Schiz_3` <- NULL
-```
-
-```{r big_tpm}
-
-```
-
-
-## Saving the TPM 
-
-```{r save_tpm}
-
-write.csv()
 ```
 
 ## The highest expressed _pir_ genes across the samples
