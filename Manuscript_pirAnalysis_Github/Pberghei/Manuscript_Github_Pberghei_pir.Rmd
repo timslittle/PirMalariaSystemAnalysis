@@ -1,7 +1,7 @@
 ---
 title: "P.berghei pir analysis"
 author: "Timothy Little"
-date: "12/03/2021"
+date: "31/08/2021"
 output: 
   html_document:
     toc: true
@@ -13,9 +13,6 @@ output:
 
 ```{r setup, include=FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = FALSE, results = TRUE, message = FALSE, warning = FALSE)
-# Set below to your own working directory.
-knitr::opts_knit$set(root.dir = 
-                       ".")
 options(scipen = 999) # Means that numbers are displayed normally not as 1e6 (1000000)
 ```
 
@@ -237,15 +234,25 @@ lengths.transcript <- subset(allgene.info, select = c(Geneid, transcript_length)
 
 ## Read in counts and calculate TPM
 
-```{r read_files}
+```{r read_files_calc_TPM}
 #Reading in the counts from file
-berghei_counts <- read_xlsx('Manuscript_Frontiers_berghei_counts.xlsx')
+berghei_counts <- read.csv('tl20-05_berghei_counts.csv',
+                               row.names = 1)
 
 berghei_tpm <- tpm(berghei_counts,
                    lengths = lengths.transcript)
 
 apply(berghei_tpm[-1], 2, sum)
+```
 
+```{r save_tpm_oldNames_allSamples}
+#Save the 'raw' TPM before any samples have been removed or sample names combined.
+
+write.csv()
+
+```
+
+```{r expt_tpms}
 #Get a list of df for each experiment.
 
 expt_nams <- unique(
