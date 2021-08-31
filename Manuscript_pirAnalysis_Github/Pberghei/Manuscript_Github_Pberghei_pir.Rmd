@@ -253,6 +253,53 @@ write.csv(berghei_tpm,
 
 ```
 
+```{r remove_E06-6h}
+#Remove the Caldelari (E06) 6h samples, as they did in their paper.
+berghei_tpm[,str_subset(colnames(berghei_tpm), 'E06_Liv.6h')] <- NULL
+```
+
+```{r hclusts, message = FALSE}
+experiment_id <- unique(na.omit(str_extract(colnames(berghei_tpm), pattern = 'E[[:digit:]]{2}')))
+
+lapply(experiment_id, 
+       function(experiment_name){
+         tpm_data <- select(berghei_tpm, matches(experiment_name))
+         if(ncol(tpm_data) > 3){
+           dists = dist(t(tpm_data))
+           par(cex=0.7)
+           plot(hclust(dists),
+                main = experiment_name)
+         }
+       })
+
+```
+
+```{r combine_similar_samples_byNames}
+col_stage <- colnames(berghei_tpm)
+
+#Combine all Liver samples 4h or before into LiverPre4h
+col_stage <- str_replace_all(col_stage,
+                             pattern = 'Liv\\.(2|4)h_[[:digit:]]+',
+                             replacement = 'Liv.pre4h')
+#Combine all Liver samples 48h or onwards into LiverPost48h
+col_stage <- str_replace_all(col_stage,
+                             pattern = 'Liv\\.(4[8-9]|[5-9][0-9])h_[[:digit:]]+',
+                             replacement = 'Liv.post48h')
+#Combine all blood meal samples 3h or before into BldMlPre3h
+col_stage <- str_replace_all(col_stage,
+                             pattern = '(1h|3h)_[[:digit:]]+', 
+                             replacement = 'Pre3h')
+#Uniquify the name names
+col_stage[grep(col_stage, 
+               perl = TRUE,
+               invert = TRUE,
+               pattern = '_[[:digit:]]{1,}$')] <- uniquify(col_stage[grep(col_stage, 
+                                                                          perl = TRUE,
+                                                                          invert = TRUE,
+                                                                          pattern = '_[[:digit:]]{1,}$')]) 
+```
+
+
 ```{r expt_tpms}
 #Get a list of df for each experiment.
 
@@ -277,13 +324,6 @@ expt_tpms <- lapply(
   }
 )
 names(expt_tpms) <- expt_nams
-```
-
-```{r remove_E06-6h}
-#Remove the Caldelari (E06) 6h samples, as they did in their paper.
-
-expt_tpms$E06$tpm <- select_at(expt_tpms$E06$tpm,
-                                          vars(-matches('Liv-6h')))
 ```
 
 Going to combine certain samples based on their distinctive profiles, e.g. <4h, 6-48h, >48h liver stages.
@@ -377,29 +417,22 @@ names(expt_tpms) <- names_expt_tpms
 expt_tpms <- (expt_tpms[order(names(expt_tpms))])
 ```
 
-
-```{r hclusts, message = FALSE}
-
-lapply(expt_tpms, function(tpm){
-  if(ncol(tpm$tpm) > 3){
-    dists = dist(t(tpm$tpm[,-1]))
-    par(cex=0.7)
-    plot(hclust(dists),
-         main = tpm$experiment)
-  }
-})
-```
-
 ```{r remove_badly_clustering_samples}
 expt_tpms$E08$tpm$`Liv-pre4h_1` <- NULL
 expt_tpms$E03$tpm$`Asex-Schiz_1` <- NULL
 expt_tpms$E03$tpm$`Asex-Schiz_3` <- NULL
 ```
 
+```{r big_tpm}
+
+```
+
+
 ## Saving the TPM 
 
 ```{r save_tpm}
 
+write.csv()
 ```
 
 ## The highest expressed _pir_ genes across the samples
@@ -481,26 +514,6 @@ lapply(all_top, `[`, c('all_genes', 'pir_genes'))
 ##Supp figure 1A - Pearson correlation plot of collated samples.
 
 ```{r all_samples_collated_heatmap}
-
-big_tpm <- bind_cols(
-  lapply(
-    expt_tpms,
-    function(x){
-      tpm_df <- x$tpm
-      colnames(tpm_df)[-1] <- paste0(x$experiment,
-                                     '_',
-                                     colnames(tpm_df)[-1])
-      tpm_df
-    }
-  )
-) %>% 
-  dplyr::rename(Geneid = Geneid...1) %>% 
-  select_at(vars(-matches('Geneid\\.\\.\\.\\d+$'))) %>% 
-  data.frame
-
-rownames(big_tpm) <- big_tpm$Geneid
-
-big_tpm <- big_tpm[,-1,drop=FALSE] 
 
 ## Collated across the stages for a more easily understood heatmap
 
