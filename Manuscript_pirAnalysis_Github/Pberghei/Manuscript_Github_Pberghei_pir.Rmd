@@ -51,12 +51,18 @@ library('ComplexHeatmap')
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 show_col(cbPalette)
 
-#Want the defaults for arrange, mutate and summarise to be from dplyr
+#Want the defaults for arrange, select, mutate and summarise to be from dplyr
 arrange <- dplyr::arrange
 mutate <- dplyr::mutate
 summarise <- dplyr::summarise
 select <- dplyr::select
 
+```
+
+```{r sourcing_functions}
+source('../rfunctions/uniquify_fun.R')
+source('../rfunctions/ordering_fun.R')
+source('../rfunctions/tpm_fun.R')
 ```
 
 ```{r function_mround}
@@ -71,32 +77,6 @@ mround <- function(x,base){
 my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) 
 ```
 
-```{r function_uniquify}
-#Make unique identifiers from a vector of names by appending '_X' where X is the number of the 'replicate'.
-uniquify <- function(vector_names, first_one = TRUE){
-  new_vector <- c()
-  df_num <- data.frame(names = unique(vector_names), rep = 1)
-  if(first_one){
-    duplicated_names <- unique(vector_names[duplicated(vector_names)])
-  }else{
-    duplicated_names <- c()
-  }
-  for(i in 1:length(vector_names)){
-    if(vector_names[i] %in% duplicated_names|!first_one){
-    name <- paste(vector_names[i],
-                  df_num$rep[match(vector_names[i], df_num$names)],
-                  sep = '_')
-    #Increase rep counter
-    df_num$rep[match(vector_names[i], df_num$names)] <- df_num$rep[match(vector_names[i], df_num$names)] + 1
-    new_vector[i] <- name
-    }else{
-      new_vector[i] <- vector_names[i]
-    }
-  }
-  new_vector
-}
-```
-
 ```{r function_firstup}
 #Capitalize first letter
 firstup <- function(x) {
@@ -105,77 +85,16 @@ firstup <- function(x) {
 }
 ```
 
-```{r function_ordering}
-#Use an order_vector of partial string matches to order.
-ordering = function(to_order, order_vector){
-  order = unlist(sapply(order_vector, 
-                        function(x){unique(str_subset(to_order, 
-                                                      pattern = paste(x)))}))
-  order_missing = unique(to_order[!to_order %in% order])
-  unique(c(order, order_missing), fromLast = TRUE)
-}
-
+```{r ordering_vectors}
 order_vector <- c('Sporo', 'Liv-pre4h', 'Liv-pre47h', 'Liv-post48h',
                  'Liv-2h','Liv-4h','Liv-12h', 'Liv-18h',
                  'Liv-24h' ,'Liv-36h','48h','54h','60h',
                  'Mero','Asex','Schiz','Gam','-Pre3h','BldMl-24h','Ook')
+
 r_order_vector <- str_replace_all(order_vector, 
                                   pattern = '-', 
                                   replacement = '\\.')
 ```
-
-```{r tpm, results='hide'}
-
-# We need to write a function to calculate the TPM from the count data we have generated. This function uses the _lengths.transcript_ object and should generate errors if it detects discrepancies between the Geneids so that the wrong transcript length is not used.
-
-tpm = function(count_data,lengths) {
-  
-  #Print an error if the id columns do not match
-  if(any(grepl(colnames(lengths), 
-               pattern = 'id', 
-               ignore.case = T)) == T & any(grepl(colnames(count_data), 
-                                                  pattern = 'id', 
-                                                  ignore.case = T)) == T){
-    if(all(count_data[grep(colnames(count_data), 
-                           pattern = 'id', ignore.case = T)] == lengths[grep(colnames(lengths), 
-                                                                             pattern = 'id', ignore.case = T)])) {
-      print('Count data and length gene ids both match')
-    } else {
-      stop('Warning:Count data and length gene ids DO NOT MATCH')
-    }
-  } else {
-    stop('Count data and/or length table supplied do not have an id column, make sure they are ordered correctly')
-  }
-  
-  #Remove the id column from supplied count_data
-  if(any(grepl(colnames(count_data), pattern = 'id',ignore.case = T)) == T){
-    counts_tpm = count_data[,-grep(colnames(count_data), pattern = 'id', ignore.case = T)]
-  } else{
-    counts_tpm <- count_data}
-  
-  #Remove the id column from supplied lengths
-  if(any(grepl(colnames(lengths), pattern = 'id', ignore.case = T)) == T){
-    lengths.table = lengths[,-grep(colnames(lengths), pattern = 'id', ignore.case = T)]
-  }else{
-    lengths.table <- lengths}
-  
-  #Now for the actual calculation
-  rpm <- counts_tpm
-  for (i in 1:dim(counts_tpm)[2]) {
-    for (j in 1:dim(counts_tpm)[1]) {
-      rpm[j,i] <- (counts_tpm[j,i]/(lengths.table[j,]/1000))
-    }
-    scale.factor <- sum(rpm[,i])/(1E6)
-    counts_tpm[,i] <- apply(rpm[,i,drop=F],1,function(x){x/scale.factor})
-  }
-  if(any(grepl(colnames(count_data), pattern = 'id', ignore.case = T)) == T){
-    counts_tpm = bind_cols(count_data[,grep(colnames(count_data), pattern = 'id', ignore.case = T), drop = FALSE], 
-                           counts_tpm)
-  } 
-  return(counts_tpm)
-}
-```
-
 
 ```{r pir_id, message=FALSE, results='hide'}
 
