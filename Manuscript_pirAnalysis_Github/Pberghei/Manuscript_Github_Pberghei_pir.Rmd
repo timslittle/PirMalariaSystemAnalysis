@@ -248,7 +248,8 @@ apply(berghei_tpm[-1], 2, sum)
 ```{r save_tpm_oldNames_allSamples}
 #Save the 'raw' TPM before any samples have been removed or sample names combined.
 
-write.csv()
+write.csv(berghei_tpm,
+          'berghei_tpm_oldNamesAllSamples.csv')
 
 ```
 
@@ -379,16 +380,14 @@ expt_tpms <- (expt_tpms[order(names(expt_tpms))])
 
 ```{r hclusts, message = FALSE}
 
-hclusts = function(tpm){
+lapply(expt_tpms, function(tpm){
   if(ncol(tpm$tpm) > 3){
     dists = dist(t(tpm$tpm[,-1]))
     par(cex=0.7)
     plot(hclust(dists),
          main = tpm$experiment)
   }
-}
-
-lapply(expt_tpms, hclusts)
+})
 ```
 
 ```{r remove_badly_clustering_samples}
