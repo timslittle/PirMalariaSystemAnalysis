@@ -250,8 +250,12 @@ top_n_genes <- function(tpm_avg,
   kable_index = rep(n, times = length(unique(tpm_avg$stage)))
   names(kable_index) = unique(tpm_avg$stage)
   
+  tpm_avg <- tpm_avg %>% 
+    ungroup %>% 
+    group_by(stage)
+  
   all_genes = tpm_avg %>% 
-    top_n(wt = mean_tpm, n = n) %>% 
+    slice_max(order_by = mean_tpm, n = n) %>% 
     dplyr::arrange(stage, desc(mean_tpm)) %>% 
     mutate_if(is.numeric, function(x){round(x, digits = 2)}) %>% 
     mutate(mean_tpm = cell_spec(mean_tpm, "html", 
@@ -269,7 +273,7 @@ top_n_genes <- function(tpm_avg,
   
   pir_genes = tpm_avg %>% 
     filter(Geneid %in% pir_id) %>% 
-    top_n(wt = mean_tpm, n = n) %>% 
+    slice_max(order_by = mean_tpm, n = n) %>% 
     dplyr::arrange(stage, desc(mean_tpm)) %>% 
     mutate_if(is.numeric, function(x){round(x, digits = 2)}) %>% 
     mutate(mean_tpm = cell_spec(mean_tpm, "html", 
