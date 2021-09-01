@@ -235,7 +235,8 @@ berghei_tpm_avg_byexpt <- berghei_tpm_melt %>%
                    mean_tpm = mean(tpm), 
                    min_tpm = min(tpm), 
                    max_tpm = max(tpm), 
-                   sd_tpm = sd(tpm)) 
+                   sd_tpm = sd(tpm)) %>% 
+  mutate(expt_stage = paste0(experiment, '_', stage))
 ```
 
 
@@ -292,7 +293,7 @@ top_n_genes <- function(tpm_avg,
     kable_styling()
   
   # print(paste0('Completed analysis of ', tpm_input$experiment))
-  list = list(all_genes, pir_genes, tpm_input$experiment)
+  list = list(all_genes, pir_genes, unique(tpm_avg$experiment))
   names(list) = c('all_genes', 'pir_genes', 'experiment')
   return(list)
 }
@@ -302,7 +303,7 @@ top_n_genes <- function(tpm_avg,
 all_top <- lapply(unique(berghei_tpm_avg_byexpt$experiment), 
                   function(expt) top_n_genes(berghei_tpm_avg_byexpt[berghei_tpm_avg_byexpt$experiment == expt,]))
 
-lapply(all_top[[1]], `[`, c('all_genes', 'pir_genes'))
+all_top[[1]]
 
 ```
 
@@ -311,15 +312,9 @@ lapply(all_top[[1]], `[`, c('all_genes', 'pir_genes'))
 ```{r all_samples_collated_heatmap}
 
 ## Collated across the stages for a more easily understood heatmap
+big_top <- berghei_tpm_avg_byexpt
 
-big_top = bind_rows(lapply(all_top,function(x){
-  data = x$tpm
-  data$stage = paste(x$experiment, data$stage, sep = '_')
-  data
-}))
-big_top <- berghei_tpm_melt
-
-big_top_recast = dcast(big_top, Geneid ~ stage, value.var = 'mean_tpm')
+big_top_recast = dcast(big_top, Geneid ~ expt_stage, value.var = 'mean_tpm')
 big_top_recast <- column_to_rownames(big_top_recast, var = 'Geneid')
 # big_top_recast = big_top_recast[,-1,drop=FALSE]
 
@@ -344,7 +339,7 @@ corrplot(cor(big_top_recast), method = 'color',
 
 ```{r supp_figure_PCA_allgenes}
 
-big_tpm_pca <-  prcomp(big_tpm, 
+big_tpm_pca <-  prcomp(berghei_tpm[,-1], 
                        center = TRUE, 
                        scale. = TRUE)
 
@@ -397,7 +392,9 @@ plot
 #Supp figure 1C - PCA using just the pir genes.
 
 ```{r supp_figure_PCA_pir}
-big_tpm_pir <- big_tpm[rownames(big_tpm) %in% pir_id,,drop = FALSE]
+big_tpm_pir <- berghei_tpm[berghei_tpm$Geneid %in% pir_id,-1,drop = FALSE]
+
+big_tpm_pir <- big_tpm_pir[apply(big_tpm_pir, 2, sum) >= 50]
 
 big_tpm_pir_pca <-  prcomp(big_tpm_pir, 
                        center = TRUE, 
@@ -446,10 +443,10 @@ plot_pir <- ggplot(big_tpm_pir_pca_coords,
 
 plot_pir
 ```
+Combining the data across the experiments.
 
 ```{r combining_stages_data}
-combined_data <- big_tpm %>% 
-  rownames_to_column(var = 'Geneid') %>% 
+combined_data <- berghei_tpm %>% 
   melt(value.name = 'tpm') %>% 
   mutate(stage = str_extract(variable, 
                              pattern = '(?<=_).+(?=_)')) %>% 
@@ -459,6 +456,7 @@ combined_data <- big_tpm %>%
                    tpm_sd = sd(tpm),
                    tpm_max = max(tpm),
                    tpm_min = min(tpm))
+
 
 combined_data <- dcast(combined_data, 
                        Geneid ~ stage, 
