@@ -92,7 +92,9 @@ chabaudi_gene_info <- read.csv('../standard_files/PlasmoDB-47_beta_Pchabaudichab
                               stringsAsFactors = FALSE)
 
 chabaudi_transcript_lengths <- select(chabaudi_gene_info, c(Gene.ID, Transcript.Length)) %>% 
-  arrange(Gene.ID)
+  arrange(Gene.ID) %>% 
+  mutate(Geneid = Gene.ID) %>% 
+  select(Geneid, Transcript.Length)
 
 
 chabaudi_gene_info <- dplyr::rename(chabaudi_gene_info, 
@@ -133,7 +135,7 @@ times_stages_table$r_stage_diff_count <- str_replace_all(times_stages_table$stag
 chab_count_table <- read.csv('Manuscript_Suppinfo_chabaudi_24h_counts.csv',
                              row.names = 1)
 
-twentyfour_ct_comb <- tpm(chab_count_table, 
+twentyfour_ct_comb <- tpm(count_data = chab_count_table, 
                           lengths = chabaudi_transcript_lengths)
 ```
 
@@ -186,11 +188,14 @@ twentyfour_avgtpm <- list(
   'rMT' = list(
     tpm = twentyfour_rMT_avg,
     experiment = 'rMT'
+  )
 )
 
-write_csv(twentyfour_rMT,
-          file = 'Pchabaudi_TPM_allBioReps.csv')
+# write_csv(twentyfour_rMT,
+#           file = 'Pchabaudi_TPM_allBioReps.csv')
+
+#The current file is slightly different to the new one I wrote, this worries me a lot.
+
 write_csv(twentyfour_rMT_avg,
           file = 'Pchabaudi_TPM_average.csv')
-
 ```
