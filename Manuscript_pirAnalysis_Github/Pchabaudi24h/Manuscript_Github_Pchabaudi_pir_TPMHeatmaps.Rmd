@@ -62,7 +62,7 @@ summarise <- dplyr::summarise
 select <- dplyr::select
 
 #Global save var - set to TRUE if you want to save figures.
-global_save_var <- TRUE
+global_save_var <- FALSE
 ```
 
 ```{r function_mround}
@@ -442,7 +442,7 @@ draw(ht,
 
 Add chapl/aapl annotation to above
 
-```{r}
+```{r chapl_aapl_ann}
 
 chapl_aapl_name_vec <- ifelse(grepl(cir_info$chapl_aapl_name_num[match(rownames(combined_data_pir_ht), 
                                                                                      cir_info$Geneid)], 
@@ -608,6 +608,15 @@ maxcol <- ceiling(
 
 # pir_highest_tpm_order <- rownames(combined_data_pir_ht)
 
+#chapl_aapl_name name labels
+num_chapl_aapl_name <- cir_info %>% 
+  group_by(chapl_aapl_name) %>% 
+  summarise(num = n_distinct(Gene.ID))
+
+labels_chapl_aapl_name <- setNames(paste0(num_chapl_aapl_name$chapl_aapl_name, 
+                                          ' (n = ', num_chapl_aapl_name$num, ')'),
+                                   num_chapl_aapl_name$chapl_aapl_name)
+
 #Sub-family annotation
 chapl_aapl_name_info <- combined_data_pir_ht$chapl_aapl_name
 annotation_col <- chapl_aapl_name_col_num[ordering(labels_chapl_aapl_name,
@@ -624,14 +633,7 @@ annotation_col <- chapl_aapl_name_col_num[ordering(labels_chapl_aapl_name,
 # )
 
 
-#chapl_aapl_name name labels
-num_chapl_aapl_name <- cir_info %>% 
-  group_by(chapl_aapl_name) %>% 
-  summarise(num = n_distinct(Gene.ID))
 
-labels_chapl_aapl_name <- setNames(paste0(num_chapl_aapl_name$chapl_aapl_name, 
-                                          ' (n = ', num_chapl_aapl_name$num, ')'),
-                                   num_chapl_aapl_name$chapl_aapl_name)
 
 ht <- Heatmap(
   log2(1+combined_data_pir_ht[,!colnames(combined_data_pir_ht) %in% 'chapl_aapl_name']),
