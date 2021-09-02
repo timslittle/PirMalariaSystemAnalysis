@@ -96,7 +96,6 @@ chabaudi_transcript_lengths <- select(chabaudi_gene_info, c(Gene.ID, Transcript.
   mutate(Geneid = Gene.ID) %>% 
   select(Geneid, Transcript.Length)
 
-
 chabaudi_gene_info <- dplyr::rename(chabaudi_gene_info, 
                              Geneid = Gene.ID,
                              Description = Product.Description)
@@ -169,12 +168,12 @@ colnames(twentyfour_tpm_rescale_nopseudo) <- colnames(twentyfour_tpm_nopseudo)
 twentyfour_ct_comb <- twentyfour_tpm_rescale_nopseudo
 ```
 
-```{r}
+```{r clean_up_and_average}
+# Change the names to remove superfluous 'rMT' 
 
-twentyfour_rMT <- select(twentyfour_ct_comb,
-                         matches('Geneid|rMT')) %>%
-  rename_with(~ str_extract(.x,pattern = '(?<=rMT_).+'),
-              matches('rMT'))
+twentyfour_ct_comb <- rename_with(twentyfour_ct_comb, 
+                                  ~ str_extract(.x,pattern = '(?<=rMT_).+'),
+                                  matches('rMT'))
 
 twentyfour_rMT_avg <- melt(twentyfour_ct_comb, 
                            variable.name = 'sample',
@@ -183,18 +182,11 @@ twentyfour_rMT_avg <- melt(twentyfour_ct_comb,
   group_by(Geneid, stage) %>% 
   summarise(mean_tpm = mean(tpm)) %>% 
   dcast(Geneid ~ stage)
+```
 
-twentyfour_avgtpm <- list(
-  'rMT' = list(
-    tpm = twentyfour_rMT_avg,
-    experiment = 'rMT'
-  )
-)
-
-# write_csv(twentyfour_rMT,
-#           file = 'Pchabaudi_TPM_allBioReps.csv')
-
-#The current file is slightly different to the new one I wrote, this worries me a lot.
+```{r save}
+write_csv(twentyfour_rMT,
+          file = 'Pchabaudi_TPM_allBioReps.csv')
 
 write_csv(twentyfour_rMT_avg,
           file = 'Pchabaudi_TPM_average.csv')
