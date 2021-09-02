@@ -65,25 +65,11 @@ select <- dplyr::select
 global_save_var <- FALSE
 ```
 
-```{r function_mround}
-mround <- function(x,base){ 
-  base*ceiling(x/base) 
-} 
+```{r source_fun}
+source('../rfunctions/usefulFunctions_mround_my-max_firstup_fun.R')
 ```
 
-```{r function_my_max}
-my_max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) #max robust to NAs
-```
-
-```{r function_ordering}
-ordering <- function(to_order, order_vector){
-  order = unlist(sapply(order_vector, 
-                        function(x){unique(str_subset(to_order, 
-                                                      pattern = paste(x)))}))
-  order_missing = unique(to_order[!to_order %in% order])
-  unique(c(order, order_missing), fromLast = TRUE)
-}
-
+```{r order_vec}
 order_vector <- c("Early.Rings",
                   "Early.Mid.Rings",
                   "Late.Mid.Rings",

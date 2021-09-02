@@ -87,12 +87,12 @@ allgene.info <- as_tibble(
   mutate(Geneid = `Gene ID`, 
          Description = `Product Description`,
          is_pseudo = `Is Pseudo`,
-         transcript_length = `Transcript Length`,
+         Transcript.Length = `Transcript Length`,
          paralog_count = `Paralog count`) %>% 
   select(Geneid, 
          Description, 
          is_pseudo, 
-         transcript_length, 
+         Transcript.Length, 
          paralog_count)
 
 pir_info <- allgene.info %>% 
@@ -199,7 +199,7 @@ two.transcript <- allgene.info %>%
 #Nine genes have two transcripts - need to give them one average of the transcripts since featurecounts has only
 # calculated one count for the locus
 two.transcript.info <- allgene.info[allgene.info$Geneid %in% two.transcript$Geneid,]
-two.transcript.mean = aggregate(transcript_length~Geneid, data=two.transcript.info, 
+two.transcript.mean = aggregate(Transcript.Length~Geneid, data=two.transcript.info, 
                                 FUN=function(x) c(mean=mean(x)))
 
 #Remove the first match
@@ -207,10 +207,10 @@ allgene.info <- allgene.info[-(match(two.transcript.mean$Geneid,
                                      allgene.info$Geneid)),]
 
 #For the second match replace the transcript value with the mean calculated with aggregate
-allgene.info$transcript_length <- as.double(allgene.info$transcript_length)
+allgene.info$Transcript.Length <- as.double(allgene.info$Transcript.Length)
 allgene.info[match(two.transcript.mean$Geneid, 
-                   allgene.info$Geneid),]$transcript_length <- two.transcript.mean$transcript_length
-lengths.transcript <- subset(allgene.info, select = c(Geneid, transcript_length), drop = F)
+                   allgene.info$Geneid),]$Transcript.Length <- two.transcript.mean$Transcript.Length
+lengths.transcript <- subset(allgene.info, select = c(Geneid, Transcript.Length), drop = F)
 ```
 
 ## Read in counts and calculate TPM
@@ -220,11 +220,38 @@ lengths.transcript <- subset(allgene.info, select = c(Geneid, transcript_length)
 berghei_counts <- read.csv('tl20-05_berghei_counts.csv',
                                row.names = 1)
 
-berghei_tpm <- tpm(berghei_counts,
+berghei_tpm <- tpm(count_data = berghei_counts,
                    lengths = lengths.transcript)
 
 apply(berghei_tpm[-1], 2, sum)
 ```
+
+```{r check_tpm}
+
+#Used `dput` function to create a df of randomly chosen part of what I assume to be the true values.
+check_tpm <- structure(list(E03_Gam_1 = c(578.506468410824, 43.8844462052653, 
+                                          93.7895540428778, 55.9251999927489, 28.3887997796848, 49.7689021855188
+), 
+E03_Gam_2 = c(491.460414371885, 38.6239066701, 119.30578922894, 
+              148.452713617397, 38.8846967267782, 25.7641457887425), 
+E03_Gam_3 = c(824.81294645121, 
+              48.1865616211443, 92.5270154766448, 74.1594147167308, 34.8902736305123, 
+              74.9586138010564), 
+E03_Ook_1 = c(340.238340611313, 206.852529849517, 
+              43.9667720316821, 26.3982623497325, 14.9136412690561, 6.22485349746656
+), 
+E03_Ook_2 = c(713.689689765822, 178.051382530752, 58.5009548960498, 
+              52.6871822865333, 18.8623926433347, 12.0840592930611), 
+E03_Ook_3 = c(409.621633449974, 
+              104.471439607932, 38.7705779604298, 31.3685913631761, 20.1312670544009, 
+              14.7857267550803)), 
+row.names = 3345:3350, 
+class = "data.frame")
+
+all.equal(berghei_tpm[3345:3350,23:28],check_tpm)
+
+```
+
 
 ```{r save_tpm_oldNames_allSamples}
 #Save the 'raw' TPM before any samples have been removed or sample names combined.

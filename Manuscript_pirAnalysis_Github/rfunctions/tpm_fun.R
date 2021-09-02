@@ -31,7 +31,7 @@ tpm = function(count_data,lengths) {
     stop('Length table needs a column labelled \"Transcript.Length\" (with capitals)')
   }
     
-    lengths.table = lengths[,'Transcript.Length']
+    lengths.table = lengths[,'Transcript.Length', drop = TRUE]
     # }else{
   #   lengths.table <- lengths}
   
