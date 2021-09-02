@@ -339,8 +339,6 @@ maxcol <- ceiling(
     log2(1+combined_data_pir_ht[!colnames(combined_data_pir_ht) %in% 'subfam'])
   ))
 
-# pir_highest_tpm_order <- rownames(combined_data_pir_ht)
-
 #Sub-family annotation
 clade_info <- combined_data_pir_ht$subfam
 annotation_col <- c(clade_col, 'ref' = 'black')
@@ -364,12 +362,6 @@ labels_subfam <- c(setNames(paste0(num_subfam$subfam, ' (n = ', num_subfam$num, 
                             num_subfam$subfam),
                    'ref' = 'ref')
 
-# anc_ha <- rowAnnotation(foo = anno_mark(at =  na.omit(match(clade_info, 'ancestral')) , 
-#                                         labels = 'ancestral',
-#                                         labels_gp = gpar(fontsize = 7),
-#                                         link_width = unit(3, "mm")))
-
-
 ht <- Heatmap(
   log2(1+combined_data_pir_ht[,!colnames(combined_data_pir_ht) %in% 'subfam']),
   cluster_rows = FALSE,
@@ -389,9 +381,6 @@ ht <- Heatmap(
   row_dend_width = unit(3, "cm"),
   width = unit(4.5, 'cm'),
   height = unit(7,'cm'),
-  # row_title = NULL,
-  # left_annotation = clade_ha,
-  # right_annotation = anc_ha,
   row_title_rot = 0,
   row_title_gp = gpar(fontsize = 10),
   row_split = forcats::fct_shift(
@@ -467,16 +456,6 @@ chapl_aapl_name_ha <- rowAnnotation(
 chapl_aapl_name_lgd <- Legend(
   title = 'CHAPL/AAPL',
   at = names(annotation_col)
-    # str_subset(
-    # sort(
-    #   factor(chapl_aapl_name_vec,
-    #          ordering(chapl_aapl_name_vec,
-    #                   order_vector = 'ChAPL'))
-    # )
-    # ,
-    # pattern = 'NA',
-    # negate = TRUE
-  # )
 ,
   legend_gp = gpar(fill = na.omit(annotation_col))
 )
@@ -606,7 +585,6 @@ maxcol <- ceiling(
     log2(1+combined_data_pir_ht[!colnames(combined_data_pir_ht) %in% 'chapl_aapl_name'])
   ))
 
-# pir_highest_tpm_order <- rownames(combined_data_pir_ht)
 
 #chapl_aapl_name name labels
 num_chapl_aapl_name <- cir_info %>% 
@@ -617,23 +595,10 @@ labels_chapl_aapl_name <- setNames(paste0(num_chapl_aapl_name$chapl_aapl_name,
                                           ' (n = ', num_chapl_aapl_name$num, ')'),
                                    num_chapl_aapl_name$chapl_aapl_name)
 
-#Sub-family annotation
+#loci annotation
 chapl_aapl_name_info <- combined_data_pir_ht$chapl_aapl_name
 annotation_col <- chapl_aapl_name_col_num[ordering(labels_chapl_aapl_name,
                                                     order_vector = 'ChAPL')]
-
-#chapl_aapl_name annotation
-
-# chapl_aapl_name_ha <- rowAnnotation(
-#   'CHAPL/AAPL' = anno_simple(
-#     chapl_aapl_name_info,
-#     col = annotation_col,
-#   ),
-#   annotation_name_gp = gpar(fontsize = 10)
-# )
-
-
-
 
 ht <- Heatmap(
   log2(1+combined_data_pir_ht[,!colnames(combined_data_pir_ht) %in% 'chapl_aapl_name']),
@@ -676,34 +641,21 @@ ht <- Heatmap(
                    rep.int(1, times = 4)), "mm")
 )
 
-# chapl_aapl_name_lgd <- Legend(
-#   title = 'CHAPL/AAPL',
-#   at = str_subset(
-#     sort(
-#       factor(labels_chapl_aapl_name,
-#              ordering(labels_chapl_aapl_name,
-#                       order_vector = 'ChAPL'))
-#     ),
-#     pattern = 'NA',
-#     negate = TRUE
-#   ),
-#   legend_gp = gpar(fill = na.omit(annotation_col))
-# )
-
 if(global_save_var){
   pdf(file = 'Manuscript_SuppFig_ChAPL-AAPL_heatmap.pdf',
       height = 5,
       width = 5)
   draw(ht, 
        row_title_side = 'left',
-       column_title_side = 'bottom',
-       # heatmap_legend_side = 'right',
-       # annotation_legend_side = 'right',
-       # annotation_legend_list = list(chapl_aapl_name_lgd),
-       # merge_legend = TRUE
+       column_title_side = 'bottom'
   )
   dev.off()
 }
+
+  draw(ht, 
+       row_title_side = 'left',
+       column_title_side = 'bottom'
+  )
 ```
 
 ```{r}
@@ -750,10 +702,6 @@ ht <- Heatmap(
   height = unit(7,'cm'),
   row_title = NULL,
   left_annotation = chapl_aapl_name_ha,
-  # row_split = 
-  #   factor(combined_data_pir_ht$chapl_aapl_name,
-  #             levels = ordering(combined_data_pir_ht$chapl_aapl_name,
-  #                               order_vector = 'ChAPL')),
   row_km = 9,
   heatmap_legend_param = list(
     labels_gp = gpar(fontsize = 10),
