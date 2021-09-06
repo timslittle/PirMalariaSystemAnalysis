@@ -21,6 +21,7 @@ options(scipen = 999) # Means that numbers are displayed normally not as 1e6 (10
 
 ```{r load_packages}
 library('treeio') # Download trees from various formats
+#May need to install ggtree from Github directly due to a recent bug: remotes::install_github("YuLab-SMU/ggtree")
 library('ggtree') # Draw phylogenetic trees with ggplot
 library('ggstance')
 library('ggnewscale')
@@ -759,7 +760,7 @@ berg_data <- data.frame(Geneid = berg$Geneid[which(berg$ancestral_ortholog == 1)
 
 ```{r berghei_percentile}
 
-berg_descr <- read_csv('../../genomes_genes_annotations/standard_files/PlasmoDb-47_beta_Pberghei_GenesByTaxon_Summary.csv') %>% 
+berg_descr <- read_csv('../../standard_files/PlasmoDb-47_beta_Pberghei_GenesByTaxon_Summary.csv') %>% 
   mutate(Geneid = `Gene ID`,
          Description = `Product Description`) %>% 
   select(c(Geneid, Description))
@@ -796,11 +797,12 @@ berg_percentile_all <- ecdf_percentile(
 Py17XNL data from gametocytes (Hart ... Lindner et al 2019) 'Plasmodium male gametocyte development and transmission are critically regulated by the two putative deadenylases of the CAF1/CCR4/NOT complex'
 
 ```{r yoelii_data}
-yeol_path <- list.files('..',
+yoel_path <- list.files('..',
                         pattern = 'Hart_2019_Pyeolii',
                         recursive = TRUE,
                         full.names = TRUE)
-yeol_counts_full <- read_xlsx(yeol_path, 
+#Something in the excel doc upsets read_xlsx so don't worry about the huge number of warnings..
+yoel_counts_full <- read_xlsx(yoel_path, 
                          sheet = 2) %>% 
   mutate(Geneid = GeneID...1,
          Description = `[Product Description]`,
@@ -808,67 +810,67 @@ yeol_counts_full <- read_xlsx(yeol_path,
   select(c(Geneid, Description, Counts)) %>% 
   arrange(Geneid)
 
-yeol_counts_full %>%
+yoel_counts_full %>%
   filter(str_detect(Description, pattern = 'PIR|CIR|IR')) %>% 
   group_by(Description) %>% 
   dplyr::summarise(n())
 
-yeol_counts <- select(yeol_counts_full, -Description)
+yoel_counts <- select(yoel_counts_full, -Description)
 
-yeol_lengths_path <- list.files('..',
+yoel_lengths_path <- list.files('..',
                                 pattern = 'PlasmoDBv46_Pyoelii17X_',
                                 recursive = TRUE,
                                 full.names = TRUE)
-yeol_lengths <- read_csv(yeol_lengths_path) %>% 
+yoel_lengths <- read_csv(yoel_lengths_path) %>% 
   mutate(Geneid = `Gene ID`,
          length = `Transcript Length`) %>% 
   select(c(Geneid, length))
 #One gene 'PY17X_0902700' has two different length transcripts - take median
-yeol_lengths %>% group_by(Geneid) %>% dplyr::summarise(n = n()) %>% dplyr::arrange(desc(n))
+yoel_lengths %>% group_by(Geneid) %>% dplyr::summarise(n = n()) %>% dplyr::arrange(desc(n))
 
 #This gives 5074.5 so need to make sure that not having an integer count messes up things but it shouldn't
-yeol_lengths <- yeol_lengths %>% 
+yoel_lengths <- yoel_lengths %>% 
   group_by(Geneid) %>% 
   dplyr::summarise(length = median(length))
-nrow(yeol_lengths)
-nrow(yeol_counts)
+nrow(yoel_lengths)
+nrow(yoel_counts)
 
-yeol_tpm <- tpm(count_data = yeol_counts, lengths = yeol_lengths)
-yeol_tpm <- yeol_tpm %>% 
-  mutate(Description = yeol_counts_full$Description[match(Geneid, 
-                                                          yeol_counts_full$Geneid)]) %>% 
+yoel_tpm <- tpm(count_data = yoel_counts, lengths = yoel_lengths)
+yoel_tpm <- yoel_tpm %>% 
+  mutate(Description = yoel_counts_full$Description[match(Geneid, 
+                                                          yoel_counts_full$Geneid)]) %>% 
   mutate(ancestral_ortholog = ifelse(Geneid %in% gene_names,1,0))
 
-yeol_tpm_pir <- yeol_tpm %>% 
+yoel_tpm_pir <- yoel_tpm %>% 
   filter(str_detect(Description, pattern = 'PIR|YIR') | ancestral_ortholog == 1) %>% 
   filter(!str_detect(Description, pattern = 'pseudo|fragment') | ancestral_ortholog == 1) %>% 
   dplyr::arrange(desc(tpm))
 
-Fn_yeol <- ecdf(yeol_tpm_pir$tpm)
+Fn_yoel <- ecdf(yoel_tpm_pir$tpm)
 
-plot(Fn_yeol)
+plot(Fn_yoel)
 
-list_yeol_percantile <- lapply(yeol_tpm_pir$Geneid[yeol_tpm_pir$ancestral_ortholog == 1], 
+list_yoel_percantile <- lapply(yoel_tpm_pir$Geneid[yoel_tpm_pir$ancestral_ortholog == 1], 
                                function(ancestr){
-                                 list(Fn_yeol(filter(yeol_tpm_pir, Geneid %in% ancestr)$tpm))
+                                 list(Fn_yoel(filter(yoel_tpm_pir, Geneid %in% ancestr)$tpm))
                                })
-yeol_percentile <- data.frame(Geneid = yeol_tpm_pir$Geneid[yeol_tpm_pir$ancestral_ortholog == 1],
-                               percentile = unlist(lapply(list_yeol_percantile, `[`, 1))) 
-yeol_percentile
+yoel_percentile <- data.frame(Geneid = yoel_tpm_pir$Geneid[yoel_tpm_pir$ancestral_ortholog == 1],
+                               percentile = unlist(lapply(list_yoel_percantile, `[`, 1))) 
+yoel_percentile
 
-yeol_percentile_all <- ecdf_percentile(yeol_tpm)
+yoel_percentile_all <- ecdf_percentile(yoel_tpm)
 
 ```
 
 ```{r chabaudi_percentile}
 
-chab_info <- read_csv('../../genomes_genes_annotations/standard_files/PlasmoDB-47_beta_Pchabaudichabaudi_GenesByTaxon_Summary.csv') %>% 
+chab_info <- read_csv('../../standard_files/PlasmoDB-47_beta_Pchabaudichabaudi_GenesByTaxon_Summary.csv') %>% 
   mutate(Geneid = `Gene ID`,
          Description = `Product Description`) %>% 
   select(c(Geneid, Description))
 
 chab_info %>% 
-  filter(str_detect(Description, pattern = 'PIR|CIR|IR')) %>% 
+  filter(str_detect(Description, pattern = 'IR')) %>% 
   group_by(Description) %>% 
   dplyr::summarise(n())
 
@@ -908,7 +910,7 @@ ancestral_df <- bind_rows(cyno_percentile_all,
                           cb_percentile_all,
                           vinck_percentile_all,
                           coat_percentile_all,
-                          yeol_percentile_all,
+                          yoel_percentile_all,
                           berg_percentile_all,
                           chab_percentile_all,
                           vivax_percentile_all)

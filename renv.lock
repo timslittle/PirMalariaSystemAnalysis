@@ -711,6 +711,13 @@
       "Repository": "CRAN",
       "Hash": "bec9e66131b3d954917a59827ab8c2ee"
     },
+    "ggfun": {
+      "Package": "ggfun",
+      "Version": "0.0.3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "d2de888f411b7ccbc6da762ec0abb3f7"
+    },
     "ggnewscale": {
       "Package": "ggnewscale",
       "Version": "0.4.5",
@@ -781,10 +788,16 @@
     },
     "ggtree": {
       "Package": "ggtree",
-      "Version": "2.4.2",
-      "Source": "Bioconductor",
+      "Version": "3.1.4.991",
+      "Source": "GitHub",
       "Remotes": "GuangchuangYu/treeio",
-      "Hash": "74639d24b8853fac7b18caa0fa296537"
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "ggtree",
+      "RemoteUsername": "YuLab-SMU",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "efea7e426fe87ac2b6442bf570cd3e9c2784197c",
+      "Hash": "c05630da46f13cd5033bd09c33f9f75b"
     },
     "glue": {
       "Package": "glue",
@@ -1302,13 +1315,6 @@
       "Repository": "CRAN",
       "Hash": "06c85365a03fdaf699966cc1d3cf53ea"
     },
-    "rvcheck": {
-      "Package": "rvcheck",
-      "Version": "0.1.8",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "11ebf2d3d4990e8bb9f28d5ab0c204fc"
-    },
     "rvest": {
       "Package": "rvest",
       "Version": "1.0.1",
@@ -1451,9 +1457,15 @@
     },
     "treeio": {
       "Package": "treeio",
-      "Version": "1.14.4",
-      "Source": "Bioconductor",
-      "Hash": "ced01e00c76cf6f58d7a693d05d5a7bf"
+      "Version": "1.17.2",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "treeio",
+      "RemoteUsername": "GuangchuangYu",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "9618bec52d10b01813a763ed8ba24466128d51a0",
+      "Hash": "27dbea83e4828f02bbf68e98c0cb66af"
     },
     "tzdb": {
       "Package": "tzdb",
