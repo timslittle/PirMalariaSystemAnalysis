@@ -322,7 +322,7 @@ x <- ggplot(berghei_comparison_stats_df,
 ```
 
 ```{r save_xlsx}
- bind_rows(
+to_save <- bind_rows(
   lapply(c(maleGam_v_Asex.Mix.results, 
            maleGam_v_Liv.Meroz.results, 
            Asex.Mix_v_Liv.Meroz.results,
@@ -334,8 +334,12 @@ x <- ggplot(berghei_comparison_stats_df,
 ) %>% 
   select(contrast, everything()) %>% 
   mutate(FDR = p.adjust(p.Value, method = 'fdr')) %>% 
-  arrange(contrast, pathway.name) %>% 
-  write_xlsx(path = 'SupplementaryInformation_Stats_Qusage_berghei.xlsx')
+  arrange(contrast, pathway.name)
+
+write_xlsx(to_save,
+           path = 'SupplementaryInformation_Stats_Qusage_berghei.xlsx')
+write.csv(to_save,
+          'SupplementaryInformation_Stats_Qusage_berghei.csv')
 ```
 
 
