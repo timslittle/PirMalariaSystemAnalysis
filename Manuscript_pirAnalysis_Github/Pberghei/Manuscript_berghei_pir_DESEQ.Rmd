@@ -43,6 +43,7 @@ library('ggplot2')
 library('stringr')
 library('RColorBrewer')
 library('DESeq2')
+library('apeglm')
 ```
 
 Download the data, and remove heterogeneous life cycle stages like 'Gam' and 'BldMl'. Will keep Asex.Mixed since we want to be able to compare that to other stages, although for each Asex stage we should remove the individual stages (like Rings) when looking at mixed, and the Mixed stages when looking at the inidvidual stages.
